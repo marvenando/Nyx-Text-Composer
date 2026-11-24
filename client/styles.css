@@ -1,19 +1,24 @@
-:root {
-  /* User Palette: Cannon Pink #854C62, Terracotta #E67669, Rajah #FAA971, Concrete #F3F3F3, Clam Shell #D9B6AA */
+:root,
+[data-theme="nyx-plum"] {
+  /* Default: Cannon Pink #854C62, Terracotta #E67669, Rajah #FAA971, Concrete #F3F3F3, Clam Shell #D9B6AA */
   --bg-root: #171215;
   --bg-surface: #21191E;
   --bg-card: #2A2026;
   --bg-card-hover: #34272F;
   --bg-stage: #1A1418;
   --bg-input: #151013;
+  --bg-overlay: rgba(23, 18, 21, 0.8);
 
   --brand-plum: #854C62;
+  --text-on-brand: #F3F3F3;
   --border: #4A3641;
   --border-strong: #945C72;
 
   --text-primary: #F3F3F3;
   --text-secondary: #D9B6AA;
   --text-on-accent: #171215;
+  --text-on-out: #171215;
+  --text-on-both: #171215;
 
   --accent: #FAA971;
   --accent-coral: #E67669;
@@ -22,6 +27,78 @@
   --radius-sm: 3px;
   --radius-md: 4px;
   --font-sans: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+}
+
+[data-theme="obsidian-amber"] {
+  --bg-root: #141413;
+  --bg-surface: #1D1D1B;
+  --bg-card: #262623;
+  --bg-card-hover: #30302C;
+  --bg-stage: #171715;
+  --bg-input: #121211;
+  --bg-overlay: rgba(20, 20, 19, 0.82);
+
+  --brand-plum: #5C4930;
+  --text-on-brand: #F2F0E9;
+  --border: #3B3A35;
+  --border-strong: #727068;
+
+  --text-primary: #F2F0E9;
+  --text-secondary: #B8B5AA;
+  --text-on-accent: #141413;
+  --text-on-out: #141413;
+  --text-on-both: #141413;
+
+  --accent: #E59838;
+  --accent-coral: #E06C5A;
+}
+
+[data-theme="slate-sage"] {
+  --bg-root: #121615;
+  --bg-surface: #1A201E;
+  --bg-card: #222A28;
+  --bg-card-hover: #2B3532;
+  --bg-stage: #151A18;
+  --bg-input: #101413;
+  --bg-overlay: rgba(18, 22, 21, 0.82);
+
+  --brand-plum: #355C4E;
+  --text-on-brand: #EFF3F1;
+  --border: #35443F;
+  --border-strong: #607870;
+
+  --text-primary: #EFF3F1;
+  --text-secondary: #AFC0B9;
+  --text-on-accent: #121615;
+  --text-on-out: #121615;
+  --text-on-both: #121615;
+
+  --accent: #7FD1AE;
+  --accent-coral: #E88B6B;
+}
+
+[data-theme="swiss-paper"] {
+  --bg-root: #F4F2ED;
+  --bg-surface: #EAE6DF;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F7F5F0;
+  --bg-stage: #FAF9F6;
+  --bg-input: #FFFFFF;
+  --bg-overlay: rgba(244, 242, 237, 0.88);
+
+  --brand-plum: #2E2C29;
+  --text-on-brand: #FFFFFF;
+  --border: #D4CEC4;
+  --border-strong: #736E66;
+
+  --text-primary: #1A1918;
+  --text-secondary: #524F4A;
+  --text-on-accent: #FFFFFF;
+  --text-on-out: #FFFFFF;
+  --text-on-both: #FFFFFF;
+
+  --accent: #B8422E;
+  --accent-coral: #2E2C29;
 }
 
 * {
@@ -166,7 +243,7 @@ input:disabled {
 .icon-btn.active {
   background: var(--brand-plum);
   border-color: var(--accent);
-  color: var(--text-primary);
+  color: var(--text-on-brand);
 }
 
 .update-dot {
@@ -202,7 +279,7 @@ input:disabled {
 
 .clear-btn:hover {
   background: var(--accent-coral);
-  color: var(--text-on-accent);
+  color: var(--text-on-out);
 }
 
 .clear-btn:active {
@@ -408,7 +485,7 @@ input:disabled {
   height: 24px;
   border-radius: var(--radius-xs);
   border: 1px solid transparent;
-  background: rgba(23, 18, 21, 0.78);
+  background: var(--bg-overlay);
   color: var(--text-secondary);
   display: flex;
   align-items: center;
@@ -442,7 +519,7 @@ input:disabled {
   padding: 1px 5px;
   border-radius: var(--radius-xs);
   background: var(--brand-plum);
-  color: var(--text-primary);
+  color: var(--text-on-brand);
   letter-spacing: 0.04em;
   pointer-events: none;
 }
@@ -493,20 +570,18 @@ input:disabled {
   color: var(--text-on-accent);
 }
 
-/* Out action uses Terracotta (#E67669) */
 .apply-btn.btn-out:hover,
 .apply-btn.btn-out:focus-visible {
   background: var(--accent-coral);
   border-color: var(--accent-coral);
-  color: var(--text-on-accent);
+  color: var(--text-on-out);
 }
 
-/* Both action uses Concrete (#F3F3F3) */
 .apply-btn.btn-both:hover,
 .apply-btn.btn-both:focus-visible {
   background: var(--text-primary);
   border-color: var(--text-primary);
-  color: var(--text-on-accent);
+  color: var(--text-on-both);
 }
 
 .apply-btn:active {
@@ -735,12 +810,12 @@ input:disabled {
 
 .status-tag.warn {
   background: var(--brand-plum);
-  color: var(--text-primary);
+  color: var(--text-on-brand);
 }
 
 .status-tag.err {
   background: var(--accent-coral);
-  color: var(--text-on-accent);
+  color: var(--text-on-out);
 }
 
 .status-text {

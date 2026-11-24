@@ -8,6 +8,7 @@
 
   var STORAGE_FAVS = "tc_favorites_v1";
   var STORAGE_TOKEN = "tc_github_token_v1";
+  var STORAGE_THEME = "nyx_theme_v1";
   var state = {
     category: "all",
     search: "",
@@ -42,6 +43,7 @@
   var elBtnToggleSettings = document.getElementById("btnToggleSettings");
   var elDrawerBody = document.getElementById("drawerBody");
   var elSettingsSummary = document.getElementById("settingsSummary");
+  var elOptTheme = document.getElementById("optTheme");
   var elOptBasedOn = document.getElementById("optBasedOn");
   var elOptDuration = document.getElementById("optDuration");
   var elValDuration = document.getElementById("valDuration");
@@ -292,16 +294,16 @@
         var isLit = p > 0.15 && p < 0.92;
         var kScale = isLit ? 1.18 : 1.0;
         transform = "scale(" + kScale.toFixed(3) + ")";
-        el.style.color = isLit ? "#ffd61f" : "#f4f4f8";
+        el.style.color = isLit ? "var(--accent)" : "";
         opacity = 1;
         break;
       case "outline-fill":
         opacity = 1;
         if (p < 0.5) {
           el.style.color = "transparent";
-          el.style.webkitTextStroke = "1.2px #f4f4f8";
+          el.style.webkitTextStroke = "1.2px var(--text-primary)";
         } else {
-          el.style.color = "#f4f4f8";
+          el.style.color = "";
           el.style.webkitTextStroke = "0px transparent";
         }
         break;
@@ -310,7 +312,7 @@
         transform = "translate3d(0," + (inv * 6).toFixed(1) + "px,0)";
         el.style.padding = "2px 6px";
         el.style.borderRadius = "3px";
-        el.style.color = p > 0.35 ? "#111114" : "#f4f4f8";
+        el.style.color = p > 0.35 ? "#171215" : "";
         el.style.background = "linear-gradient(90deg, #facc15 " + Math.round(clamp01(p) * 100) + "%, transparent " + Math.round(clamp01(p) * 100) + "%)";
         break;
       // ---- NEW PACK 3: MECHANICAL & DATA ----
@@ -381,8 +383,8 @@
         opacity = p > 0.45 ? 1 : 0.01;
         var bw = p < 0.5 ? Math.round((p / 0.5) * 100) : Math.round(((1 - p) / 0.5) * 100);
         el.style.padding = "2px 6px";
-        el.style.background = p < 0.98 ? ("linear-gradient(90deg, #f4f4f8 " + bw + "%, transparent " + bw + "%)") : "transparent";
-        el.style.color = p < 0.5 ? "transparent" : "#f4f4f8";
+        el.style.background = p < 0.98 ? ("linear-gradient(90deg, var(--text-primary) " + bw + "%, transparent " + bw + "%)") : "transparent";
+        el.style.color = p < 0.5 ? "transparent" : "";
         break;
       // ---- NEW PACK 6: SCI-FI & HUD ----
       case "terminal-cursor":
@@ -1124,7 +1126,34 @@
     });
   }
 
+  // ==================== THEME SWITCHER ====================
+  function applyTheme(themeId) {
+    var valid = { "nyx-plum": 1, "obsidian-amber": 1, "slate-sage": 1, "swiss-paper": 1 };
+    var chosen = valid[themeId] ? themeId : "nyx-plum";
+    document.documentElement.setAttribute("data-theme", chosen);
+    if (elOptTheme) elOptTheme.value = chosen;
+    try {
+      localStorage.setItem(STORAGE_THEME, chosen);
+    } catch (e) {}
+  }
+
+  function loadTheme() {
+    try {
+      return localStorage.getItem(STORAGE_THEME) || "nyx-plum";
+    } catch (e) {
+      return "nyx-plum";
+    }
+  }
+
+  if (elOptTheme) {
+    elOptTheme.addEventListener("change", function () {
+      applyTheme(elOptTheme.value);
+      setStatus("Panel theme switched to " + elOptTheme.options[elOptTheme.selectedIndex].text + ".", "ok");
+    });
+  }
+
   // Init
+  applyTheme(loadTheme());
   renderCategories();
   renderGrid();
   updateSettingsSummary();
