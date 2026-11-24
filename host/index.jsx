@@ -1,0 +1,800 @@
+/**
+ * Text Composer - After Effects ExtendScript Host Engine (ES3 Compatible)
+ * Supports After Effects 2021 - 2026+ (JavaScript & Legacy Expression Engines).
+ *
+ * Non-destructive architecture:
+ *  - [TC IN] / [TC OUT] Text Animators + Expression Selectors anchored to inPoint / outPoint.
+ *  - [TC FX] Continuous Loop / Wiggle / Wave / Hue modifiers (stack with IN & OUT).
+ *  - [TC NUM] Expression-driven Number Counter / Odometer on Source Text.
+ *  - [TC BG] Auto-sizing parented Shape Layers (Box, Highlighter, Underline).
+ *  - [TC Mask] Dynamic auto-sizing Mask for Mask Reveal presets.
+ */
+
+var TC_PREFIX_IN = "[TC IN]";
+var TC_PREFIX_OUT = "[TC OUT]";
+var TC_PREFIX_FX = "[TC FX]";
+var TC_PREFIX_NUM = "[TC NUM]";
+var TC_PREFIX_BG = "[TC BG]";
+var TC_PREFIX_RGB = "[TC RGB]";
+var TC_MASK_NAME = "[TC Mask]";
+
+// ==================== ES3 SAFE JSON HELPERS ====================
+function tc_escapeStr(s) {
+    return String(s)
+        .replace(/\\/g, "\\\\")
+        .replace(/"/g, '\\"')
+        .replace(/\r/g, "\\r")
+        .replace(/\n/g, "\\n");
+}
+
+function tc_jsonResponse(ok, message) {
+    return '{"ok":' + (ok ? "true" : "false") + ',"message":"' + tc_escapeStr(message) + '"}';
+}
+
+function tc_parseJSON(str) {
+    return eval("(" + str + ")");
+}
+
+// ==================== CLEANUP HELPERS ====================
+function tc_removeByPrefix(layer, prefix) {
+    var textProp = layer.property("ADBE Text Properties");
+    if (textProp) {
+        var animators = textProp.property("ADBE Text Animators");
+        if (animators) {
+            for (var i = animators.numProperties; i >= 1; i--) {
+                var a = animators.property(i);
+                if (a && a.name.indexOf(prefix) === 0) {
+                    a.remove();
+                }
+            }
+        }
+    }
+
+    var effects = layer.property("ADBE Effect Parade");
+    if (effects) {
+        for (var j = effects.numProperties; j >= 1; j--) {
+            var ef = effects.property(j);
+            if (ef && ef.name.indexOf(prefix) === 0) {
+                ef.remove();
+            }
+        }
+    }
+}
+
+function tc_removeMask(layer) {
+    var masks = layer.property("ADBE Mask Parade");
+    if (!masks) return;
+    for (var i = masks.numProperties; i >= 1; i--) {
+        var m = masks.property(i);
+        if (m && m.name === TC_MASK_NAME) {
+            m.remove();
+        }
+    }
+}
+
+function tc_removeLinkedBg(comp, layer) {
+    for (var i = comp.numLayers; i >= 1; i--) {
+        var l = comp.layer(i);
+        if (l && l.parent === layer && l.name.indexOf(TC_PREFIX_BG) === 0) {
+            l.remove();
+        }
+    }
+}
+
+function tc_clearCounter(layer) {
+    try {
+        var src = layer.property("ADBE Text Properties").property("ADBE Text Document");
+        if (src && src.expression && src.expression.indexOf("/*TC_COUNTER*/") !== -1) {
+            src.expression = "";
+        }
+    } catch (e) {}
+    tc_removeByPrefix(layer, TC_PREFIX_NUM);
+}
+
+function tc_hasAnyMaskPreset(layer) {
+    var textProp = layer.property("ADBE Text Properties");
+    if (!textProp) return false;
+    var animators = textProp.property("ADBE Text Animators");
+    if (!animators) return false;
+    for (var i = 1; i <= animators.numProperties; i++) {
+        if (animators.property(i).name.indexOf("[M]") !== -1) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// ==================== EFFECT CONTROLS ====================
+function tc_addSlider(effects, name, val) {
+    var s = effects.addProperty("ADBE Slider Control");
+    s.name = name;
+    var p = s.property("ADBE Slider Control-0001") || s.property(1);
+    if (p) p.setValue(val);
+    return s;
+}
+
+function tc_addCheckbox(effects, name, checked) {
+    var c = effects.addProperty("ADBE Checkbox Control");
+    c.name = name;
+    var p = c.property("ADBE Checkbox Control-0001") || c.property(1);
+    if (p) p.setValue(checked ? 1 : 0);
+    return c;
+}
+
+function tc_addColor(effects, name, rgba) {
+    var col = effects.addProperty("ADBE Color Control");
+    col.name = name;
+    var p = col.property("ADBE Color Control-0001") || col.property(1);
+    if (p) p.setValue(rgba);
+    return col;
+}
+
+function tc_setExprSelector(expSel, basedOnCode, exprStr) {
+    var basedOnProp = expSel.property("ADBE Text Range Type2") || expSel.property("Based On") || expSel.property(1);
+    if (basedOnProp) {
+        try { basedOnProp.setValue(basedOnCode); } catch (e) {}
+    }
+    var amountProp = expSel.property("ADBE Text Expressible Amount") || expSel.property("Amount") || expSel.property(2);
+    if (amountProp) {
+        amountProp.expression = exprStr;
+    }
+}
+
+function tc_ensureControls(layer, prefix, cfg) {
+    var effects = layer.property("ADBE Effect Parade");
+    tc_addSlider(effects, prefix + " Duration (s)", cfg.duration);
+    tc_addSlider(effects, prefix + " Stagger (%)", cfg.stagger);
+    tc_addSlider(effects, prefix + " Overshoot", cfg.overshoot);
+    tc_addCheckbox(effects, prefix + " Reverse Order", cfg.reverse);
+    if (cfg.ae && cfg.ae.accentColor) {
+        tc_addColor(effects, prefix + " Accent Color", cfg.ae.accentColor);
+    }
+}
+
+// ==================== AUTO-SIZING MASK ====================
+function tc_ensureMask(layer) {
+    tc_removeMask(layer);
+    var masks = layer.property("ADBE Mask Parade");
+    if (!masks) return;
+
+    var mask = masks.addProperty("ADBE Mask Atom");
+    mask.name = TC_MASK_NAME;
+    mask.maskMode = MaskMode.ADD;
+
+    var maskPath = mask.property("ADBE Mask Shape");
+    var maskExpr = [
+        "var midT = inPoint + Math.max(0.01, (outPoint - inPoint) * 0.5);",
+        "var r = sourceRectAtTime(midT, false);",
+        "var padX = 28;",
+        "var padY = 12;",
+        "var l = r.left - padX;",
+        "var t = r.top - padY;",
+        "var ri = r.left + r.width + padX;",
+        "var b = r.top + r.height + padY;",
+        "createPath([[l, t], [ri, t], [ri, b], [l, b]], [], [], true);"
+    ].join("\n");
+
+    maskPath.expression = maskExpr;
+}
+
+// ==================== AUTO-SIZING LINKED SHAPE (BOX / HIGHLIGHTER / UNDERLINE) ====================
+function tc_ensureBgShape(comp, layer, shapeType, bgColor, direction) {
+    tc_removeLinkedBg(comp, layer);
+
+    var shape = comp.layers.addShape();
+    shape.name = TC_PREFIX_BG + " " + shapeType.toUpperCase() + " - " + layer.name;
+    shape.inPoint = layer.inPoint;
+    shape.outPoint = layer.outPoint;
+    shape.moveAfter(layer);
+    shape.parent = layer;
+    shape.property("ADBE Transform Group").property("ADBE Position").setValue([0, 0]);
+
+    var effects = shape.property("ADBE Effect Parade");
+    tc_addColor(effects, TC_PREFIX_BG + " Color", bgColor || [0.18, 0.55, 1.0, 1]);
+    tc_addSlider(effects, TC_PREFIX_BG + " Pad X", shapeType === "underline" ? 8 : 26);
+    tc_addSlider(effects, TC_PREFIX_BG + " Pad Y", shapeType === "underline" ? 6 : 14);
+
+    var contents = shape.property("ADBE Root Vectors Group");
+    var grp = contents.addProperty("ADBE Vector Group");
+    grp.name = "Auto Shape";
+
+    var grpContents = grp.property("ADBE Vectors Group");
+    var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
+    var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
+    fill.property("ADBE Vector Fill Color").expression = 'effect("' + TC_PREFIX_BG + ' Color")("Color")';
+
+    if (shapeType === "box") {
+        rect.property("ADBE Vector Rect Roundness").setValue(14);
+    } else if (shapeType === "highlighter") {
+        rect.property("ADBE Vector Rect Roundness").setValue(6);
+    } else {
+        rect.property("ADBE Vector Rect Roundness").setValue(3);
+    }
+
+    var rectSize = rect.property("ADBE Vector Rect Size");
+    var rectPos = rect.property("ADBE Vector Rect Position");
+    var grpTransform = grp.property("ADBE Vector Transform Group");
+    var grpAnchor = grpTransform.property("ADBE Vector Anchor");
+    var grpPos = grpTransform.property("ADBE Vector Position");
+    var grpScale = grpTransform.property("ADBE Vector Scale");
+
+    if (shapeType === "underline") {
+        rectSize.expression = [
+            "var p = thisLayer.parent;",
+            "var midT = p.inPoint + Math.max(0.01, (p.outPoint - p.inPoint) * 0.5);",
+            "var r = p.sourceRectAtTime(midT, false);",
+            'var padX = effect("' + TC_PREFIX_BG + ' Pad X")("Slider");',
+            'var barH = Math.max(2, effect("' + TC_PREFIX_BG + ' Pad Y")("Slider"));',
+            "[r.width + padX * 2, barH];"
+        ].join("\n");
+        rectPos.setValue([0, 0]);
+        grpAnchor.expression = [
+            "var p = thisLayer.parent;",
+            "var midT = p.inPoint + Math.max(0.01, (p.outPoint - p.inPoint) * 0.5);",
+            "var r = p.sourceRectAtTime(midT, false);",
+            'var padX = effect("' + TC_PREFIX_BG + ' Pad X")("Slider");',
+            "[-(r.width + padX * 2) * 0.5, 0];"
+        ].join("\n");
+        grpPos.expression = [
+            "var p = thisLayer.parent;",
+            "var midT = p.inPoint + Math.max(0.01, (p.outPoint - p.inPoint) * 0.5);",
+            "var r = p.sourceRectAtTime(midT, false);",
+            'var padX = effect("' + TC_PREFIX_BG + ' Pad X")("Slider");',
+            "[r.left - padX, r.top + r.height + 12];"
+        ].join("\n");
+    } else {
+        rectSize.expression = [
+            "var p = thisLayer.parent;",
+            "var midT = p.inPoint + Math.max(0.01, (p.outPoint - p.inPoint) * 0.5);",
+            "var r = p.sourceRectAtTime(midT, false);",
+            'var padX = effect("' + TC_PREFIX_BG + ' Pad X")("Slider");',
+            'var padY = effect("' + TC_PREFIX_BG + ' Pad Y")("Slider");',
+            "[r.width + padX * 2, r.height + padY * 2];"
+        ].join("\n");
+        rectPos.setValue([0, 0]);
+
+        if (shapeType === "highlighter") {
+            grpAnchor.expression = [
+                "var p = thisLayer.parent;",
+                "var midT = p.inPoint + Math.max(0.01, (p.outPoint - p.inPoint) * 0.5);",
+                "var r = p.sourceRectAtTime(midT, false);",
+                'var padX = effect("' + TC_PREFIX_BG + ' Pad X")("Slider");',
+                "[-(r.width + padX * 2) * 0.5, 0];"
+            ].join("\n");
+            grpPos.expression = [
+                "var p = thisLayer.parent;",
+                "var midT = p.inPoint + Math.max(0.01, (p.outPoint - p.inPoint) * 0.5);",
+                "var r = p.sourceRectAtTime(midT, false);",
+                'var padX = effect("' + TC_PREFIX_BG + ' Pad X")("Slider");',
+                "[r.left - padX, r.top + r.height * 0.5];"
+            ].join("\n");
+        } else {
+            grpPos.expression = [
+                "var p = thisLayer.parent;",
+                "var midT = p.inPoint + Math.max(0.01, (p.outPoint - p.inPoint) * 0.5);",
+                "var r = p.sourceRectAtTime(midT, false);",
+                "[r.left + r.width * 0.5, r.top + r.height * 0.5];"
+            ].join("\n");
+        }
+    }
+
+    // Animate scale cleanly in sync with parent IN/OUT duration
+    var useIn = (direction === "in" || direction === "both");
+    var useOut = (direction === "out" || direction === "both");
+    var scaleLines = [
+        "var p = thisLayer.parent;",
+        "var s = 1;"
+    ];
+    if (useIn) {
+        scaleLines.push('var dIn = 0.6; try { dIn = Math.max(0.05, p.effect("' + TC_PREFIX_IN + ' Duration (s)")("Slider")); } catch(e) {}');
+        scaleLines.push("var tIn = clamp((time - p.inPoint) / (dIn * 0.75), 0, 1);");
+        scaleLines.push("var eIn = (tIn >= 1) ? 1 : (tIn <= 0 ? 0 : 1 - Math.pow(2, -10 * tIn));");
+        scaleLines.push("s *= eIn;");
+    }
+    if (useOut) {
+        scaleLines.push('var dOut = 0.6; try { dOut = Math.max(0.05, p.effect("' + TC_PREFIX_OUT + ' Duration (s)")("Slider")); } catch(e) {}');
+        scaleLines.push("var tOut = clamp((time - (p.outPoint - dOut)) / (dOut * 0.75), 0, 1);");
+        scaleLines.push("var eOut = 1 - ((tOut >= 1) ? 1 : (tOut <= 0 ? 0 : 1 - Math.pow(2, -10 * tOut)));");
+        scaleLines.push("s *= eOut;");
+    }
+    if (shapeType === "box") {
+        scaleLines.push("[s * 100, (0.65 + 0.35 * s) * 100];");
+    } else {
+        scaleLines.push("[s * 100, 100];");
+    }
+    grpScale.expression = scaleLines.join("\n");
+}
+
+// ==================== CHROMATIC RGB HIT ====================
+function tc_applyRgbHit(layer, direction) {
+    tc_removeByPrefix(layer, TC_PREFIX_RGB);
+    var effects = layer.property("ADBE Effect Parade");
+    if (!effects.canAddProperty("ADBE VR Chromatic Aberration")) return;
+
+    var rgb = effects.addProperty("ADBE VR Chromatic Aberration");
+    rgb.name = TC_PREFIX_RGB + " Chromatic Hit";
+
+    var useIn = (direction === "in" || direction === "both");
+    var useOut = (direction === "out" || direction === "both");
+
+    var lines = ["var amt = 0;"];
+    if (useIn) {
+        lines.push('var dIn = 0.5; try { dIn = Math.max(0.05, effect("' + TC_PREFIX_IN + ' Duration (s)")("Slider")); } catch(e) {}');
+        lines.push("var tIn = clamp((time - inPoint) / (dIn * 0.7), 0, 1);");
+        lines.push("if (tIn > 0 && tIn < 1) amt = Math.max(amt, Math.sin(tIn * Math.PI) * 14);");
+    }
+    if (useOut) {
+        lines.push('var dOut = 0.5; try { dOut = Math.max(0.05, effect("' + TC_PREFIX_OUT + ' Duration (s)")("Slider")); } catch(e) {}');
+        lines.push("var tOut = clamp((time - (outPoint - dOut)) / (dOut * 0.7), 0, 1);");
+        lines.push("if (tOut > 0 && tOut < 1) amt = Math.max(amt, Math.sin(tOut * Math.PI) * 14);");
+    }
+    lines.push("amt;");
+    var expr = lines.join("\n");
+
+    try {
+        rgb.property("ADBE VR Chromatic Aberration-0001").expression = expr; // Aberration Red
+        rgb.property("ADBE VR Chromatic Aberration-0003").expression = "-(" + expr.replace(/amt;\s*$/, "") + "amt);"; // Aberration Blue
+    } catch (e) {}
+}
+
+// ==================== PER-CHARACTER 3D ====================
+function tc_enablePerChar3D(comp, layer) {
+    try {
+        layer.threeDLayer = true;
+        var textProps = layer.property("ADBE Text Properties");
+        var animators = textProps.property("ADBE Text Animators");
+        var cmdId = app.findMenuCommandId("Enable Per-character 3D");
+        if (cmdId && cmdId !== 0) {
+            var prevSel = [];
+            for (var i = 0; i < comp.selectedLayers.length; i++) {
+                prevSel.push(comp.selectedLayers[i]);
+            }
+            for (var j = 0; j < prevSel.length; j++) {
+                prevSel[j].selected = false;
+            }
+            layer.selected = true;
+            var testAnim = animators.addProperty("ADBE Text Animator");
+            var can3D = testAnim.property("ADBE Text Animator Properties").canAddProperty("ADBE Text Rotation X");
+            testAnim.remove();
+            if (!can3D) {
+                app.executeCommand(cmdId);
+            }
+            layer.selected = false;
+            for (var k = 0; k < prevSel.length; k++) {
+                prevSel[k].selected = true;
+            }
+        }
+    } catch (e) {}
+}
+
+// ==================== EXPRESSION GENERATOR ====================
+function tc_buildSelectorExpression(prefix, isOut, easeType, randomOrder, centerOut, isKaraoke) {
+    var lines = [];
+    lines.push('var dur = Math.max(0.05, effect("' + prefix + ' Duration (s)")("Slider"));');
+    lines.push('var stag = clamp(effect("' + prefix + ' Stagger (%)")("Slider"), 0, 100) / 100;');
+    lines.push('var ovr = Math.max(0, effect("' + prefix + ' Overshoot")("Slider")) / 100;');
+    lines.push('var rev = effect("' + prefix + ' Reverse Order")("Checkbox") == 1;');
+    lines.push("var total = Math.max(1, textTotal);");
+    lines.push("var idx = textIndex - 1;");
+
+    if (randomOrder) {
+        lines.push("var seed = Math.sin((idx + 1) * 12.9898 + 78.233) * 43758.5453;");
+        lines.push("var norm = seed - Math.floor(seed);");
+        lines.push("if (rev) norm = 1 - norm;");
+    } else if (centerOut) {
+        lines.push("var mid = (total - 1) / 2;");
+        lines.push("var norm = total > 1 ? Math.abs(idx - mid) / Math.max(0.5, mid) : 0;");
+        lines.push("if (rev) norm = 1 - norm;");
+    } else {
+        lines.push("var norm = total > 1 ? idx / (total - 1) : 0;");
+        lines.push("if (rev) norm = 1 - norm;");
+    }
+
+    lines.push("var staggerSpan = stag * 0.72;");
+    lines.push("var unitDur = Math.max(0.08, 1 - staggerSpan);");
+
+    if (isOut) {
+        lines.push("var gT = (time - (outPoint - dur)) / dur;");
+        lines.push("var t = clamp((gT - norm * staggerSpan) / unitDur, 0, 1);");
+    } else {
+        lines.push("var gT = (time - inPoint) / dur;");
+        lines.push("var t = clamp((gT - norm * staggerSpan) / unitDur, 0, 1);");
+    }
+
+    if (isKaraoke) {
+        // Bell-curve pulse per word: pops up & lights up, then settles cleanly back
+        lines.push("var p = (t <= 0 || t >= 1) ? 0 : Math.sin(t * Math.PI);");
+        lines.push("p * 100;");
+        return lines.join("\n");
+    }
+
+    if (easeType === "expo") {
+        lines.push("var p = (t >= 1) ? 1 : (t <= 0 ? 0 : 1 - Math.pow(2, -10 * t));");
+    } else if (easeType === "cubic") {
+        lines.push("var p = 1 - Math.pow(1 - t, 3);");
+    } else if (easeType === "back") {
+        lines.push("var c1 = 1.2 + ovr * 3.2;");
+        lines.push("var c3 = c1 + 1;");
+        lines.push("var p = (t <= 0) ? 0 : (t >= 1 ? 1 : 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2));");
+    } else if (easeType === "elastic") {
+        lines.push("var amp = 1 + ovr * 1.6;");
+        lines.push("var p = (t <= 0) ? 0 : (t >= 1 ? 1 : Math.pow(2, -8 * t) * Math.sin((t * 10 - 0.75) * (2 * Math.PI / 3.2)) * amp + 1);");
+    } else if (easeType === "step") {
+        lines.push("var p = (t >= 0.5) ? 1 : 0;");
+    } else if (easeType === "flicker") {
+        lines.push("var s = Math.sin(t * 44 + idx * 5) + Math.cos(t * 21 + idx * 3);");
+        lines.push("var p = (t <= 0.01) ? 0 : (t >= 0.99 ? 1 : (s > -0.15 ? 1 : 0));");
+    } else if (easeType === "glitch") {
+        lines.push("var st = Math.floor(t * 6) / 6;");
+        lines.push("var jitter = Math.sin(t * 65 + idx * 11) * 0.18 * (1 - t);");
+        lines.push("var p = (t <= 0.01) ? 0 : (t >= 0.99 ? 1 : clamp(st + jitter, 0, 1));");
+    } else {
+        lines.push("var p = t;");
+    }
+
+    if (isOut) {
+        lines.push("p * 100;");
+    } else {
+        lines.push("(1 - p) * 100;");
+    }
+
+    return lines.join("\n");
+}
+
+function tc_populateAnimatorProps(animProps, props, prefix) {
+    if (props.position3D) {
+        var p3 = animProps.addProperty("ADBE Text Position 3D");
+        p3.setValue(props.position3D);
+    } else if (props.position) {
+        var p2 = animProps.addProperty("ADBE Text Position 3D");
+        p2.setValue([props.position[0], props.position[1]]);
+    }
+
+    if (props.scale) {
+        var sc = animProps.addProperty("ADBE Text Scale 3D");
+        sc.setValue([props.scale[0], props.scale[1]]);
+    }
+
+    if (typeof props.opacity === "number") {
+        var op = animProps.addProperty("ADBE Text Opacity");
+        op.setValue(props.opacity);
+    }
+
+    if (typeof props.rotation === "number") {
+        var rot = animProps.addProperty("ADBE Text Rotation");
+        rot.setValue(props.rotation);
+    }
+
+    if (typeof props.rotationX === "number" && animProps.canAddProperty("ADBE Text Rotation X")) {
+        var rx = animProps.addProperty("ADBE Text Rotation X");
+        rx.setValue(props.rotationX);
+    }
+
+    if (typeof props.rotationY === "number" && animProps.canAddProperty("ADBE Text Rotation Y")) {
+        var ry = animProps.addProperty("ADBE Text Rotation Y");
+        ry.setValue(props.rotationY);
+    }
+
+    if (typeof props.skew === "number") {
+        var sk = animProps.addProperty("ADBE Text Skew");
+        sk.setValue(props.skew);
+    }
+
+    if (typeof props.tracking === "number") {
+        var tr = animProps.addProperty("ADBE Text Tracking Amount");
+        tr.setValue(props.tracking);
+    }
+
+    if (props.blur) {
+        var bl = animProps.addProperty("ADBE Text Blur");
+        bl.setValue([props.blur[0], props.blur[1]]);
+    }
+
+    if (typeof props.charOffset === "number") {
+        var co = animProps.addProperty("ADBE Text Character Offset");
+        co.setValue(props.charOffset);
+    }
+
+    if (props.fillColor) {
+        var fc = animProps.addProperty("ADBE Text Fill Color");
+        fc.setValue(props.fillColor);
+        if (prefix) {
+            fc.expression = 'effect("' + prefix + ' Accent Color")("Color")';
+        }
+    }
+
+    if (typeof props.fillHue === "number") {
+        var fh = animProps.addProperty("ADBE Text Fill Hue");
+        fh.setValue(props.fillHue);
+    }
+
+    if (typeof props.fillOpacity === "number") {
+        var fo = animProps.addProperty("ADBE Text Fill Opacity");
+        fo.setValue(props.fillOpacity);
+    }
+
+    if (props.strokeColor) {
+        var stc = animProps.addProperty("ADBE Text Stroke Color");
+        stc.setValue(props.strokeColor);
+    }
+
+    if (typeof props.strokeWidth === "number") {
+        var stw = animProps.addProperty("ADBE Text Stroke Width");
+        stw.setValue(props.strokeWidth);
+    }
+}
+
+// ==================== APPLY SINGLE DIRECTION (IN / OUT) ====================
+function tc_applyDirection(comp, layer, cfg, isOut) {
+    var prefix = isOut ? TC_PREFIX_OUT : TC_PREFIX_IN;
+    var ae = cfg.ae || {};
+    var props = ae.props || {};
+
+    tc_removeByPrefix(layer, prefix);
+
+    if (ae.perChar3D) {
+        tc_enablePerChar3D(comp, layer);
+    }
+
+    tc_ensureControls(layer, prefix, cfg);
+
+    var textProp = layer.property("ADBE Text Properties");
+    var animators = textProp.property("ADBE Text Animators");
+    var animator = animators.addProperty("ADBE Text Animator");
+    animator.name = prefix + " " + cfg.name + (ae.mask ? " [M]" : "");
+
+    var animProps = animator.property("ADBE Text Animator Properties");
+    tc_populateAnimatorProps(animProps, props, prefix);
+
+    var selectors = animator.property("ADBE Text Selectors");
+    for (var i = selectors.numProperties; i >= 1; i--) {
+        selectors.property(i).remove();
+    }
+
+    var expSel = selectors.addProperty("ADBE Text Expressible Selector");
+    var basedOnCode = 1;
+    if (cfg.basedOn === "words") basedOnCode = 3;
+    else if (cfg.basedOn === "lines") basedOnCode = 4;
+
+    tc_setExprSelector(
+        expSel,
+        basedOnCode,
+        tc_buildSelectorExpression(
+            prefix,
+            isOut,
+            ae.ease || "expo",
+            !!ae.randomOrder,
+            !!ae.centerOut,
+            cfg.id === "social_karaoke_pop"
+        )
+    );
+
+    if (ae.mask) {
+        tc_ensureMask(layer);
+    } else if (!tc_hasAnyMaskPreset(layer)) {
+        tc_removeMask(layer);
+    }
+}
+
+// ==================== APPLY CONTINUOUS LOOP / FX ====================
+function tc_applyLoopFX(layer, cfg) {
+    var ae = cfg.ae || {};
+    var props = ae.props || {};
+    var mode = ae.loopMode || "wave";
+
+    tc_removeByPrefix(layer, TC_PREFIX_FX);
+
+    var effects = layer.property("ADBE Effect Parade");
+    tc_addSlider(effects, TC_PREFIX_FX + " Speed", ae.loopSpeed || 2);
+    tc_addSlider(effects, TC_PREFIX_FX + " Intensity (%)", ae.loopIntensity || 100);
+
+    var textProp = layer.property("ADBE Text Properties");
+    var animators = textProp.property("ADBE Text Animators");
+    var animator = animators.addProperty("ADBE Text Animator");
+    animator.name = TC_PREFIX_FX + " " + cfg.name;
+
+    var animProps = animator.property("ADBE Text Animator Properties");
+    tc_populateAnimatorProps(animProps, props, null);
+
+    var selectors = animator.property("ADBE Text Selectors");
+    for (var i = selectors.numProperties; i >= 1; i--) {
+        selectors.property(i).remove();
+    }
+
+    var expSel = selectors.addProperty("ADBE Text Expressible Selector");
+    var basedOnCode = 1;
+    if (cfg.basedOn === "words") basedOnCode = 3;
+    else if (cfg.basedOn === "lines") basedOnCode = 4;
+
+    var lines = [
+        'var spd = Math.max(0.05, effect("' + TC_PREFIX_FX + ' Speed")("Slider"));',
+        'var inten = effect("' + TC_PREFIX_FX + ' Intensity (%)")("Slider");',
+        "var idx = textIndex - 1;"
+    ];
+
+    if (mode === "wiggle") {
+        lines.push("var stepT = Math.floor(time * spd);");
+        lines.push("var s = Math.sin((idx + 1) * 19.37 + stepT * 12.9898);");
+        lines.push("s * inten;");
+    } else if (mode === "wave") {
+        lines.push("Math.sin(time * spd * 3.14159 + idx * 0.7) * inten;");
+    } else if (mode === "drift") {
+        lines.push("var prog = clamp((time - inPoint) / Math.max(0.1, outPoint - inPoint), 0, 1);");
+        lines.push("prog * spd * inten;");
+    } else if (mode === "pulse") {
+        lines.push("((Math.sin(time * spd * 3.14159 + idx * 0.65) + 1) * 0.5) * inten;");
+    } else if (mode === "hue") {
+        lines.push("((time * spd * 0.5 + idx * 0.14) % 1) * inten;");
+    } else {
+        lines.push("Math.sin(time * spd * 3.14159) * inten;");
+    }
+
+    tc_setExprSelector(expSel, basedOnCode, lines.join("\n"));
+}
+
+// ==================== APPLY NUMBER COUNTER ====================
+function tc_applyCounter(layer, cfg) {
+    tc_clearCounter(layer);
+
+    var textProp = layer.property("ADBE Text Properties");
+    var srcProp = textProp.property("ADBE Text Document");
+    var rawText = "";
+    try {
+        rawText = String(srcProp.value.text);
+    } catch (e) {
+        rawText = "1000";
+    }
+
+    // Parse prefix, number, suffix from current text (e.g. "$10,000" or "98.5%")
+    var match = rawText.match(/^([^0-9\-\.]*)([\-]?[0-9,\.]+)(.*)$/);
+    var prefix = match ? match[1] : "";
+    var numStr = match ? match[2].replace(/,/g, "") : "1000";
+    var suffix = match ? match[3] : "";
+    var targetVal = parseFloat(numStr);
+    if (isNaN(targetVal)) targetVal = 1000;
+
+    var decimals = 0;
+    var dotIdx = numStr.indexOf(".");
+    if (dotIdx !== -1) {
+        decimals = numStr.length - dotIdx - 1;
+    }
+
+    var effects = layer.property("ADBE Effect Parade");
+    tc_addSlider(effects, TC_PREFIX_NUM + " Duration (s)", cfg.duration || 1.5);
+    tc_addSlider(effects, TC_PREFIX_NUM + " Start Value", 0);
+    tc_addSlider(effects, TC_PREFIX_NUM + " End Value", targetVal);
+    tc_addSlider(effects, TC_PREFIX_NUM + " Decimals", decimals);
+    tc_addCheckbox(effects, TC_PREFIX_NUM + " Commas", true);
+
+    var safePre = tc_escapeStr(prefix);
+    var safeSuf = tc_escapeStr(suffix);
+
+    var expr = [
+        "/*TC_COUNTER*/",
+        'var dur = Math.max(0.05, effect("' + TC_PREFIX_NUM + ' Duration (s)")("Slider"));',
+        'var v0 = effect("' + TC_PREFIX_NUM + ' Start Value")("Slider");',
+        'var v1 = effect("' + TC_PREFIX_NUM + ' End Value")("Slider");',
+        'var dec = Math.max(0, Math.round(effect("' + TC_PREFIX_NUM + ' Decimals")("Slider")));',
+        'var useCommas = effect("' + TC_PREFIX_NUM + ' Commas")("Checkbox") == 1;',
+        "var t = clamp((time - inPoint) / dur, 0, 1);",
+        "var e = (t >= 1) ? 1 : (t <= 0 ? 0 : 1 - Math.pow(2, -10 * t));",
+        "var val = v0 + (v1 - v0) * e;",
+        "var fixed = val.toFixed(dec);",
+        "if (useCommas) {",
+        '  var parts = fixed.split(".");',
+        '  parts[0] = parts[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",");',
+        '  fixed = parts.join(".");',
+        "}",
+        '"' + safePre + '" + fixed + "' + safeSuf + '";'
+    ].join("\n");
+
+    srcProp.expression = expr;
+}
+
+// ==================== PUBLIC ENTRYPOINTS ====================
+function TextComposer_applyPreset(jsonStr) {
+    var comp = app.project ? app.project.activeItem : null;
+    if (!comp || !(comp instanceof CompItem)) {
+        return tc_jsonResponse(false, "Open a Composition first.");
+    }
+
+    var selected = comp.selectedLayers;
+    if (!selected || selected.length === 0) {
+        return tc_jsonResponse(false, "Select at least one Text Layer.");
+    }
+
+    var cfg;
+    try {
+        cfg = tc_parseJSON(jsonStr);
+    } catch (e) {
+        return tc_jsonResponse(false, "Invalid preset payload: " + e.toString());
+    }
+
+    var textLayers = [];
+    for (var i = 0; i < selected.length; i++) {
+        if (selected[i] instanceof TextLayer) {
+            textLayers.push(selected[i]);
+        }
+    }
+
+    if (textLayers.length === 0) {
+        return tc_jsonResponse(false, "No Text Layers selected. Select a Text Layer and try again.");
+    }
+
+    app.beginUndoGroup("Text Composer: " + cfg.name + " (" + cfg.direction.toUpperCase() + ")");
+    try {
+        for (var j = 0; j < textLayers.length; j++) {
+            var layer = textLayers[j];
+            var ae = cfg.ae || {};
+
+            if (cfg.direction === "fx") {
+                tc_applyLoopFX(layer, cfg);
+            } else if (cfg.direction === "counter") {
+                tc_applyCounter(layer, cfg);
+            } else {
+                if (cfg.direction === "in" || cfg.direction === "both") {
+                    tc_applyDirection(comp, layer, cfg, false);
+                }
+                if (cfg.direction === "out" || cfg.direction === "both") {
+                    tc_applyDirection(comp, layer, cfg, true);
+                }
+                if (ae.bgShape) {
+                    tc_ensureBgShape(comp, layer, ae.bgShape, ae.bgColor, cfg.direction);
+                }
+                if (ae.rgbHit) {
+                    tc_applyRgbHit(layer, cfg.direction);
+                }
+            }
+        }
+        app.endUndoGroup();
+        return tc_jsonResponse(
+            true,
+            "Applied '" + cfg.name + "' (" + cfg.direction.toUpperCase() + ") to " +
+            textLayers.length + " text layer" + (textLayers.length > 1 ? "s." : ".")
+        );
+    } catch (err) {
+        app.endUndoGroup();
+        var lineInfo = err.line ? " (line " + err.line + ")" : "";
+        return tc_jsonResponse(false, "Error applying preset" + lineInfo + ": " + err.toString());
+    }
+}
+
+function TextComposer_clearSelected() {
+    var comp = app.project ? app.project.activeItem : null;
+    if (!comp || !(comp instanceof CompItem)) {
+        return tc_jsonResponse(false, "Open a Composition first.");
+    }
+
+    var selected = comp.selectedLayers;
+    if (!selected || selected.length === 0) {
+        return tc_jsonResponse(false, "Select at least one Text Layer to clear.");
+    }
+
+    var count = 0;
+    app.beginUndoGroup("Text Composer: Clear Animations");
+    try {
+        for (var i = 0; i < selected.length; i++) {
+            if (selected[i] instanceof TextLayer) {
+                tc_removeByPrefix(selected[i], TC_PREFIX_IN);
+                tc_removeByPrefix(selected[i], TC_PREFIX_OUT);
+                tc_removeByPrefix(selected[i], TC_PREFIX_FX);
+                tc_removeByPrefix(selected[i], TC_PREFIX_RGB);
+                tc_removeMask(selected[i]);
+                tc_removeLinkedBg(comp, selected[i]);
+                tc_clearCounter(selected[i]);
+                count++;
+            }
+        }
+        app.endUndoGroup();
+        if (count === 0) {
+            return tc_jsonResponse(false, "No Text Layers selected.");
+        }
+        return tc_jsonResponse(
+            true,
+            "Cleared Text Composer animations from " + count + " text layer" + (count > 1 ? "s." : ".")
+        );
+    } catch (err) {
+        app.endUndoGroup();
+        return tc_jsonResponse(false, "Error clearing layer: " + err.toString());
+    }
+}

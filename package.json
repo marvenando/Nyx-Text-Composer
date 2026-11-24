@@ -1,0 +1,16 @@
+{
+  "name": "nyx-text-composer",
+  "version": "1.0.0",
+  "description": "Nyx Text Composer — Mister Horse-inspired Text Presets CEP Extension Panel for Adobe After Effects (2024-2026).",
+  "private": true,
+  "scripts": {
+    "install-ae": "Install.bat"
+  },
+  "keywords": [
+    "after-effects",
+    "cep",
+    "text-presets",
+    "motion-graphics",
+    "extendscript"
+  ]
+}
