@@ -16,7 +16,11 @@ window.TEXT_COMPOSER_CATEGORIES = [
   { id: "loops", label: "Loops & FX" },
   { id: "social", label: "Social & Captions" },
   { id: "mechanical", label: "Mechanical & Data" },
-  { id: "editorial", label: "Editorial & Boxes" }
+  { id: "editorial", label: "Editorial & Boxes" },
+  { id: "brutalist", label: "Brutalist & Print" },
+  { id: "hud", label: "Sci-Fi & HUD" },
+  { id: "anime", label: "Anime & Impact" },
+  { id: "retro", label: "Retro & VHS" }
 ];
 
 window.TEXT_COMPOSER_PRESETS = [
@@ -850,6 +854,286 @@ window.TEXT_COMPOSER_PRESETS = [
       ease: "back",
       rgbHit: true,
       props: { scale: [145, 145], opacity: 0, blur: [18, 0] }
+    }
+  },
+
+  // ==================== 13. BRUTALIST & PRINT ====================
+  {
+    id: "brut_hard_snap",
+    name: "Brutalist Hard-Snap",
+    category: "brutalist",
+    tags: ["swiss", "brutalist", "12fps", "posterize", "snap", "film"],
+    sampleText: "BRUTAL",
+    defaultDuration: 0.7,
+    defaultStagger: 45,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "hard-snap", unit: "chars", ease: "posterize12" },
+    ae: {
+      ease: "posterize12",
+      props: { position: [0, 75], scale: [125, 125], opacity: 0 }
+    }
+  },
+  {
+    id: "brut_ink_stamp",
+    name: "Ink Stamp Press",
+    category: "brutalist",
+    tags: ["ink", "stamp", "print", "documentary", "rough", "vox"],
+    sampleText: "STAMPED",
+    defaultDuration: 0.65,
+    defaultStagger: 30,
+    defaultOvershoot: 20,
+    defaultBasedOn: "words",
+    preview: { mode: "zoom-down", unit: "words", ease: "back" },
+    ae: {
+      ease: "back",
+      fxEffect: "inkStamp",
+      props: { scale: [165, 165], opacity: 0 }
+    }
+  },
+  {
+    id: "brut_archival_cutout",
+    name: "Archival Cutout",
+    category: "brutalist",
+    tags: ["collage", "paper", "newspaper", "12fps", "documentary", "cutout"],
+    sampleText: "ARCHIVE",
+    defaultDuration: 0.85,
+    defaultStagger: 50,
+    defaultOvershoot: 0,
+    defaultBasedOn: "words",
+    preview: { mode: "archival-cut", unit: "words", ease: "posterize12" },
+    ae: {
+      ease: "posterize12",
+      props: { position: [0, -55], rotation: -12, opacity: 0 }
+    }
+  },
+  {
+    id: "brut_block_wipe",
+    name: "Swiss Block Wipe",
+    category: "brutalist",
+    tags: ["swiss", "block", "wipe", "reveal", "editorial", "studio"],
+    sampleText: "SWISS",
+    defaultDuration: 0.8,
+    defaultStagger: 0,
+    defaultOvershoot: 0,
+    defaultBasedOn: "words",
+    preview: { mode: "block-wipe", unit: "whole", ease: "expo" },
+    ae: {
+      ease: "step",
+      bgShape: "wipeBlock",
+      bgColor: [0.95, 0.95, 0.96, 1],
+      props: { opacity: 0 }
+    }
+  },
+
+  // ==================== 14. SCI-FI & GAMING HUD ====================
+  {
+    id: "hud_terminal_cursor",
+    name: "Terminal Cursor Type",
+    category: "hud",
+    isTerminal: true,
+    tags: ["terminal", "cursor", "code", "hud", "sci-fi", "gaming"],
+    sampleText: "SYS_OK",
+    defaultDuration: 1.2,
+    defaultStagger: 0,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "terminal-cursor", unit: "whole", ease: "linear" },
+    ae: {
+      terminal: true,
+      cursorChar: "_"
+    }
+  },
+  {
+    id: "hud_corner_brackets",
+    name: "HUD Corner Brackets",
+    category: "hud",
+    tags: ["hud", "brackets", "frame", "gaming", "tech", "ui"],
+    sampleText: "TARGET",
+    defaultDuration: 0.75,
+    defaultStagger: 40,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "hud-brackets", unit: "whole", ease: "expo" },
+    ae: {
+      ease: "expo",
+      bgShape: "brackets",
+      bgColor: [0.02, 0.85, 0.91, 1],
+      props: { opacity: 0, charOffset: 10 }
+    }
+  },
+  {
+    id: "hud_hologram_scan",
+    name: "Hologram Scanlines",
+    category: "hud",
+    tags: ["hologram", "scanlines", "sci-fi", "glow", "cyber", "flicker"],
+    sampleText: "HOLO",
+    defaultDuration: 0.9,
+    defaultStagger: 55,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "hologram", unit: "chars", ease: "flicker" },
+    ae: {
+      ease: "flicker",
+      randomOrder: true,
+      fxEffect: "hologram",
+      props: { opacity: 0, blur: [8, 0] }
+    }
+  },
+  {
+    id: "hud_target_lock",
+    name: "Target Lock Readout",
+    category: "hud",
+    tags: ["lock", "hud", "tracking", "center", "sci-fi", "data"],
+    sampleText: "LOCKED",
+    defaultDuration: 0.85,
+    defaultStagger: 45,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "target-lock", unit: "chars", ease: "expo" },
+    ae: {
+      ease: "expo",
+      centerOut: true,
+      props: { tracking: 90, charOffset: 14, opacity: 0 }
+    }
+  },
+
+  // ==================== 15. ANIME & IMPACT ====================
+  {
+    id: "anime_beat_slam",
+    name: "Beat Impact Slam",
+    category: "anime",
+    tags: ["amv", "anime", "beat", "slam", "impact", "shake", "drop"],
+    sampleText: "IMPACT!",
+    defaultDuration: 0.55,
+    defaultStagger: 15,
+    defaultOvershoot: 40,
+    defaultBasedOn: "words",
+    preview: { mode: "beat-slam", unit: "words", ease: "impact" },
+    ae: {
+      ease: "impact",
+      props: { scale: [185, 185], blur: [38, 12], opacity: 0 }
+    }
+  },
+  {
+    id: "anime_cyber_jitter",
+    name: "Cyber Tracking Jitter",
+    category: "anime",
+    tags: ["anime", "amv", "cyberpunk", "jitter", "tracking", "madhouse"],
+    sampleText: "SYNAPSE",
+    defaultDuration: 0.8,
+    defaultStagger: 55,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "glitch-jitter", unit: "chars", ease: "glitch" },
+    ae: {
+      ease: "glitch",
+      randomOrder: true,
+      props: { tracking: 55, position: [26, -16], opacity: 0 }
+    }
+  },
+  {
+    id: "anime_shear_slice",
+    name: "Shear Slice Snap",
+    category: "anime",
+    tags: ["slice", "slash", "anime", "amv", "skew", "fast"],
+    sampleText: "SLASH",
+    defaultDuration: 0.6,
+    defaultStagger: 40,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "shear-slice", unit: "chars", ease: "expo" },
+    ae: {
+      ease: "expo",
+      props: { position: [140, 0], skew: -38, opacity: 0 }
+    }
+  },
+  {
+    id: "anime_flash_strobe",
+    name: "Flash Strobe Punch",
+    category: "anime",
+    tags: ["strobe", "flash", "hype", "amv", "music", "punch"],
+    sampleText: "STROBE",
+    defaultDuration: 0.55,
+    defaultStagger: 25,
+    defaultOvershoot: 30,
+    defaultBasedOn: "words",
+    preview: { mode: "strobe", unit: "words", ease: "strobe" },
+    ae: {
+      ease: "strobe",
+      props: { scale: [130, 130], opacity: 0 }
+    }
+  },
+
+  // ==================== 16. RETRO & VHS ANALOG ====================
+  {
+    id: "retro_crt_power",
+    name: "CRT Power-On",
+    category: "retro",
+    tags: ["crt", "tv", "retro", "80s", "glow", "power"],
+    sampleText: "CRT ON",
+    defaultDuration: 0.65,
+    defaultStagger: 0,
+    defaultOvershoot: 0,
+    defaultBasedOn: "lines",
+    preview: { mode: "crt-on", unit: "whole", ease: "expo" },
+    ae: {
+      ease: "expo",
+      fxEffect: "crtGlow",
+      props: { scale: [240, 4], blur: [28, 0], opacity: 0 }
+    }
+  },
+  {
+    id: "retro_80s_stutter",
+    name: "80s Stutter Pop",
+    category: "retro",
+    tags: ["80s", "retro", "shadow", "12fps", "stutter", "pop"],
+    sampleText: "RETRO",
+    defaultDuration: 0.75,
+    defaultStagger: 45,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "retro-stutter", unit: "chars", ease: "posterize12" },
+    ae: {
+      ease: "posterize12",
+      fxEffect: "hardShadow",
+      props: { scale: [0, 0], rotation: -8, opacity: 0 }
+    }
+  },
+  {
+    id: "retro_vhs_wobble",
+    name: "VHS Tracking Wobble",
+    category: "retro",
+    isLoop: true,
+    tags: ["vhs", "tape", "analog", "wobble", "loop", "fx", "retro"],
+    sampleText: "VHS 94",
+    defaultDuration: 1.5,
+    defaultStagger: 0,
+    defaultOvershoot: 0,
+    defaultBasedOn: "lines",
+    preview: { mode: "loop-vhs", unit: "whole", ease: "linear" },
+    ae: {
+      loopMode: "vhs",
+      loopSpeed: 6,
+      loopIntensity: 100,
+      props: { position: [10, 3], skew: 6, blur: [4, 0] }
+    }
+  },
+  {
+    id: "retro_tape_bleed",
+    name: "Retro Tape Bleed",
+    category: "retro",
+    tags: ["vhs", "bleed", "rgb", "analog", "blur", "retro"],
+    sampleText: "ANALOG",
+    defaultDuration: 0.85,
+    defaultStagger: 45,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "rgb-hit", unit: "chars", ease: "flicker" },
+    ae: {
+      ease: "flicker",
+      rgbHit: true,
+      props: { blur: [22, 4], opacity: 0 }
     }
   }
 ];

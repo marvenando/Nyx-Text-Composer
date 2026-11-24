@@ -3,7 +3,7 @@
 **Text Presets Plugin Panel** for **Adobe After Effects 2024 – 2026** (also compatible with AE 2021–2023).
 
 ## Features
-- **48 Curated Text Presets** across 12 categories:
+- **64 Curated Text Presets** across 16 categories:
   - **Mask Reveal** (Mask Slide Up/Down/Left, Mask Rise Letters — with dynamic auto-sizing mask)
   - **Overshoot & Slide** (Overshoot Up/Drop, Whip From Right, Skew Slide Rush)
   - **Pop & Bounce** (Pop In Letters, Elastic Bounce, Spin & Pop, Punch Zoom Down)
@@ -16,6 +16,10 @@
   - **Social & Captions** — Karaoke Word Highlight, Outline-to-Fill Snap, Highlighter Box Swipe, Rapid Hook Punch
   - **Mechanical & Data** — Slot-Machine Roll, Split-Flap Board, Number Counter (`$10,000` / `98%` auto-detected)
   - **Editorial & Boxes** — Center-Out Split, Auto-Boxed Title, Underline Draw, Chromatic RGB Hit
+  - **Brutalist & Print** — Brutalist Hard-Snap, Ink Stamp Press, Archival Cutout, Swiss Block Wipe
+  - **Sci-Fi & HUD** — Terminal Cursor Type, HUD Corner Brackets, Hologram Scanlines, Target Lock Readout
+  - **Anime & Impact** — Beat Impact Slam, Cyber Tracking Jitter, Shear Slice Snap, Flash Strobe Punch
+  - **Retro & VHS** — CRT Power-On, 80s Stutter Pop, VHS Tracking Wobble *(Loop FX)*, Retro Tape Bleed
 - **Live Animated Previews:** Hover any card (or toggle **Auto-Play**) to preview the animation in real time.
 - **Non-Destructive IN / OUT / BOTH:** Animations are anchored to the layer's `In Point` and `Out Point` via Expression Selectors—trimming or sliding your text layer automatically shifts the animations with zero keyframes to move.
 - **Live Effect Controls:** Every applied animation adds native sliders in **Effect Controls** (`Duration`, `Stagger %`, `Overshoot`, `Reverse Order`).

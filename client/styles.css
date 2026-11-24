@@ -375,7 +375,8 @@ html, body {
 
 .badge-3d,
 .badge-fx,
-.badge-num {
+.badge-num,
+.badge-term {
   position: absolute;
   top: 5px;
   left: 6px;
@@ -384,6 +385,12 @@ html, body {
   padding: 1px 4px;
   border-radius: 3px;
   letter-spacing: 0.04em;
+}
+
+.badge-term {
+  background: rgba(16, 185, 129, 0.25);
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  color: #6ee7b7;
 }
 
 .badge-3d {
@@ -477,6 +484,12 @@ html, body {
 .apply-btn.btn-counter:hover {
   background: #0891b2;
   border-color: #22d3ee;
+  color: #fff;
+}
+
+.apply-btn.btn-term:hover {
+  background: #059669;
+  border-color: #34d399;
   color: #fff;
 }
 

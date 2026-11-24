@@ -14,6 +14,8 @@ var TC_PREFIX_IN = "[TC IN]";
 var TC_PREFIX_OUT = "[TC OUT]";
 var TC_PREFIX_FX = "[TC FX]";
 var TC_PREFIX_NUM = "[TC NUM]";
+var TC_PREFIX_TERM = "[TC TERM]";
+var TC_PREFIX_EFX = "[TC EFX]";
 var TC_PREFIX_BG = "[TC BG]";
 var TC_PREFIX_RGB = "[TC RGB]";
 var TC_MASK_NAME = "[TC Mask]";
@@ -84,11 +86,12 @@ function tc_removeLinkedBg(comp, layer) {
 function tc_clearCounter(layer) {
     try {
         var src = layer.property("ADBE Text Properties").property("ADBE Text Document");
-        if (src && src.expression && src.expression.indexOf("/*TC_COUNTER*/") !== -1) {
+        if (src && src.expression && (src.expression.indexOf("/*TC_COUNTER*/") !== -1 || src.expression.indexOf("/*TC_TERMINAL*/") !== -1)) {
             src.expression = "";
         }
     } catch (e) {}
     tc_removeByPrefix(layer, TC_PREFIX_NUM);
+    tc_removeByPrefix(layer, TC_PREFIX_TERM);
 }
 
 function tc_hasAnyMaskPreset(layer) {
@@ -185,7 +188,11 @@ function tc_ensureBgShape(comp, layer, shapeType, bgColor, direction) {
     shape.name = TC_PREFIX_BG + " " + shapeType.toUpperCase() + " - " + layer.name;
     shape.inPoint = layer.inPoint;
     shape.outPoint = layer.outPoint;
-    shape.moveAfter(layer);
+    if (shapeType === "wipeBlock") {
+        shape.moveBefore(layer);
+    } else {
+        shape.moveAfter(layer);
+    }
     shape.parent = layer;
     shape.property("ADBE Transform Group").property("ADBE Position").setValue([0, 0]);
 
@@ -200,15 +207,23 @@ function tc_ensureBgShape(comp, layer, shapeType, bgColor, direction) {
 
     var grpContents = grp.property("ADBE Vectors Group");
     var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
-    var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
-    fill.property("ADBE Vector Fill Color").expression = 'effect("' + TC_PREFIX_BG + ' Color")("Color")';
-
-    if (shapeType === "box") {
-        rect.property("ADBE Vector Rect Roundness").setValue(14);
-    } else if (shapeType === "highlighter") {
-        rect.property("ADBE Vector Rect Roundness").setValue(6);
+    if (shapeType === "brackets") {
+        var stroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
+        stroke.property("ADBE Vector Stroke Color").expression = 'effect("' + TC_PREFIX_BG + ' Color")("Color")';
+        stroke.property("ADBE Vector Stroke Width").setValue(4);
+        rect.property("ADBE Vector Rect Roundness").setValue(0);
     } else {
-        rect.property("ADBE Vector Rect Roundness").setValue(3);
+        var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
+        fill.property("ADBE Vector Fill Color").expression = 'effect("' + TC_PREFIX_BG + ' Color")("Color")';
+        if (shapeType === "box") {
+            rect.property("ADBE Vector Rect Roundness").setValue(14);
+        } else if (shapeType === "highlighter") {
+            rect.property("ADBE Vector Rect Roundness").setValue(6);
+        } else if (shapeType === "wipeBlock") {
+            rect.property("ADBE Vector Rect Roundness").setValue(0);
+        } else {
+            rect.property("ADBE Vector Rect Roundness").setValue(3);
+        }
     }
 
     var rectSize = rect.property("ADBE Vector Rect Size");
@@ -297,12 +312,69 @@ function tc_ensureBgShape(comp, layer, shapeType, bgColor, direction) {
         scaleLines.push("var eOut = 1 - ((tOut >= 1) ? 1 : (tOut <= 0 ? 0 : 1 - Math.pow(2, -10 * tOut)));");
         scaleLines.push("s *= eOut;");
     }
-    if (shapeType === "box") {
+    if (shapeType === "wipeBlock") {
+        // Swiss Block Wipe: expands L->R on first half, retracts L->R on second half
+        var wbLines = [
+            "var p = thisLayer.parent;",
+            'var dIn = 0.8; try { dIn = Math.max(0.1, p.effect("' + TC_PREFIX_IN + ' Duration (s)")("Slider")); } catch(e) {}',
+            "var t = clamp((time - p.inPoint) / dIn, 0, 1);",
+            "var sx = t < 0.5 ? (1 - Math.pow(2, -10 * (t * 2))) : (1 - (1 - Math.pow(2, -10 * ((t - 0.5) * 2))));",
+            "if (t <= 0 || t >= 1) sx = 0;",
+            "[sx * 100, 100];"
+        ];
+        grpScale.expression = wbLines.join("\n");
+    } else if (shapeType === "box" || shapeType === "brackets") {
         scaleLines.push("[s * 100, (0.65 + 0.35 * s) * 100];");
+        grpScale.expression = scaleLines.join("\n");
     } else {
         scaleLines.push("[s * 100, 100];");
+        grpScale.expression = scaleLines.join("\n");
     }
-    grpScale.expression = scaleLines.join("\n");
+}
+
+// ==================== NATIVE LAYER EFFECTS (INK, HOLOGRAM, CRT, SHADOW) ====================
+function tc_applyLayerEffect(layer, fxType) {
+    tc_removeByPrefix(layer, TC_PREFIX_EFX);
+    var effects = layer.property("ADBE Effect Parade");
+    if (!effects) return;
+
+    try {
+        if (fxType === "inkStamp" && effects.canAddProperty("ADBE Roughen Edges")) {
+            var re = effects.addProperty("ADBE Roughen Edges");
+            re.name = TC_PREFIX_EFX + " Ink Edges";
+            try { re.property("ADBE Roughen Edges-0002").setValue(2.5); } catch (e) {} // Border
+            try { re.property("ADBE Roughen Edges-0003").setValue(1.5); } catch (e) {} // Edge Sharpness
+            try { re.property("ADBE Roughen Edges-0005").setValue(40); } catch (e) {}  // Scale
+        } else if (fxType === "hologram") {
+            if (effects.canAddProperty("ADBE Venetian Blinds")) {
+                var vb = effects.addProperty("ADBE Venetian Blinds");
+                vb.name = TC_PREFIX_EFX + " Scanlines";
+                try { vb.property("ADBE Venetian Blinds-0001").setValue(22); } catch (e) {} // Transition
+                try { vb.property("ADBE Venetian Blinds-0002").setValue(90); } catch (e) {} // Direction
+                try { vb.property("ADBE Venetian Blinds-0003").setValue(6); } catch (e) {}  // Width
+            }
+            if (effects.canAddProperty("ADBE Glo2")) {
+                var hg = effects.addProperty("ADBE Glo2");
+                hg.name = TC_PREFIX_EFX + " Holo Glow";
+                try { hg.property("ADBE Glo2-0002").setValue(55); } catch (e) {}  // Threshold
+                try { hg.property("ADBE Glo2-0003").setValue(28); } catch (e) {}  // Radius
+                try { hg.property("ADBE Glo2-0004").setValue(1.2); } catch (e) {} // Intensity
+            }
+        } else if (fxType === "crtGlow" && effects.canAddProperty("ADBE Glo2")) {
+            var cg = effects.addProperty("ADBE Glo2");
+            cg.name = TC_PREFIX_EFX + " CRT Glow";
+            try { cg.property("ADBE Glo2-0002").setValue(50); } catch (e) {}
+            try { cg.property("ADBE Glo2-0003").setValue(36); } catch (e) {}
+            try { cg.property("ADBE Glo2-0004").setValue(1.3); } catch (e) {}
+        } else if (fxType === "hardShadow" && effects.canAddProperty("ADBE Drop Shadow")) {
+            var ds = effects.addProperty("ADBE Drop Shadow");
+            ds.name = TC_PREFIX_EFX + " Hard Shadow";
+            try { ds.property("ADBE Drop Shadow-0002").setValue(230); } catch (e) {} // Opacity
+            try { ds.property("ADBE Drop Shadow-0003").setValue(135); } catch (e) {} // Direction
+            try { ds.property("ADBE Drop Shadow-0004").setValue(8); } catch (e) {}   // Distance
+            try { ds.property("ADBE Drop Shadow-0005").setValue(0); } catch (e) {}   // Softness
+        }
+    } catch (e) {}
 }
 
 // ==================== CHROMATIC RGB HIT ====================
@@ -428,6 +500,13 @@ function tc_buildSelectorExpression(prefix, isOut, easeType, randomOrder, center
         lines.push("var st = Math.floor(t * 6) / 6;");
         lines.push("var jitter = Math.sin(t * 65 + idx * 11) * 0.18 * (1 - t);");
         lines.push("var p = (t <= 0.01) ? 0 : (t >= 0.99 ? 1 : clamp(st + jitter, 0, 1));");
+    } else if (easeType === "posterize12") {
+        lines.push("var st12 = Math.floor(t * 5) / 5;");
+        lines.push("var p = (t <= 0.01) ? 0 : (t >= 0.99 ? 1 : 1 - Math.pow(1 - st12, 2));");
+    } else if (easeType === "impact") {
+        lines.push("var p = (t <= 0.01) ? 0 : (t >= 0.99 ? 1 : (t < 0.35 ? 1 - Math.pow(1 - (t / 0.35), 3) : 1 + Math.sin((t - 0.35) * 42) * (0.14 + ovr * 0.25) * Math.exp(-8 * (t - 0.35))));");
+    } else if (easeType === "strobe") {
+        lines.push("var p = (t <= 0.01) ? 0 : (t >= 0.99 ? 1 : (t < 0.45 ? (Math.floor(t * 16) % 2 == 0 ? 1 : 0) : 1));");
     } else {
         lines.push("var p = t;");
     }
@@ -625,6 +704,9 @@ function tc_applyLoopFX(layer, cfg) {
         lines.push("((Math.sin(time * spd * 3.14159 + idx * 0.65) + 1) * 0.5) * inten;");
     } else if (mode === "hue") {
         lines.push("((time * spd * 0.5 + idx * 0.14) % 1) * inten;");
+    } else if (mode === "vhs") {
+        lines.push("var gl = Math.sin(time * spd * 9.3) > 0.92 ? 1.8 : 0.45;");
+        lines.push("Math.sin(time * spd * 2.1 + idx * 0.4) * gl * inten;");
     } else {
         lines.push("Math.sin(time * spd * 3.14159) * inten;");
     }
@@ -691,6 +773,32 @@ function tc_applyCounter(layer, cfg) {
     srcProp.expression = expr;
 }
 
+// ==================== APPLY TERMINAL CURSOR TYPEWRITER ====================
+function tc_applyTerminal(layer, cfg) {
+    tc_clearCounter(layer);
+
+    var textProp = layer.property("ADBE Text Properties");
+    var srcProp = textProp.property("ADBE Text Document");
+    var effects = layer.property("ADBE Effect Parade");
+    tc_addSlider(effects, TC_PREFIX_TERM + " Duration (s)", cfg.duration || 1.2);
+    tc_addSlider(effects, TC_PREFIX_TERM + " Blink Speed (Hz)", 2.5);
+
+    var cursor = (cfg.ae && cfg.ae.cursorChar) ? tc_escapeStr(cfg.ae.cursorChar) : "_";
+
+    var expr = [
+        "/*TC_TERMINAL*/",
+        'var dur = Math.max(0.05, effect("' + TC_PREFIX_TERM + ' Duration (s)")("Slider"));',
+        'var blinkHz = Math.max(0.2, effect("' + TC_PREFIX_TERM + ' Blink Speed (Hz)")("Slider"));',
+        "var full = value;",
+        "var t = clamp((time - inPoint) / dur, 0, 1);",
+        "var count = Math.floor(t * full.length);",
+        "var showCur = (Math.floor((time - inPoint) * blinkHz * 2) % 2) == 0;",
+        'full.substr(0, count) + (showCur ? "' + cursor + '" : " ");'
+    ].join("\n");
+
+    srcProp.expression = expr;
+}
+
 // ==================== PUBLIC ENTRYPOINTS ====================
 function TextComposer_applyPreset(jsonStr) {
     var comp = app.project ? app.project.activeItem : null;
@@ -731,6 +839,8 @@ function TextComposer_applyPreset(jsonStr) {
                 tc_applyLoopFX(layer, cfg);
             } else if (cfg.direction === "counter") {
                 tc_applyCounter(layer, cfg);
+            } else if (cfg.direction === "terminal") {
+                tc_applyTerminal(layer, cfg);
             } else {
                 if (cfg.direction === "in" || cfg.direction === "both") {
                     tc_applyDirection(comp, layer, cfg, false);
@@ -743,6 +853,9 @@ function TextComposer_applyPreset(jsonStr) {
                 }
                 if (ae.rgbHit) {
                     tc_applyRgbHit(layer, cfg.direction);
+                }
+                if (ae.fxEffect) {
+                    tc_applyLayerEffect(layer, ae.fxEffect);
                 }
             }
         }
@@ -778,6 +891,7 @@ function TextComposer_clearSelected() {
                 tc_removeByPrefix(selected[i], TC_PREFIX_IN);
                 tc_removeByPrefix(selected[i], TC_PREFIX_OUT);
                 tc_removeByPrefix(selected[i], TC_PREFIX_FX);
+                tc_removeByPrefix(selected[i], TC_PREFIX_EFX);
                 tc_removeByPrefix(selected[i], TC_PREFIX_RGB);
                 tc_removeMask(selected[i]);
                 tc_removeLinkedBg(comp, selected[i]);

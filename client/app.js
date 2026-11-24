@@ -110,6 +110,24 @@
       var step = Math.floor(t * 6) / 6;
       return step + (Math.sin(t * 60) * 0.12);
     }
+    if (type === "posterize12") {
+      if (t <= 0.01) return 0;
+      if (t >= 0.99) return 1;
+      var st12 = Math.floor(t * 5) / 5;
+      return 1 - Math.pow(1 - st12, 2);
+    }
+    if (type === "impact") {
+      if (t <= 0.01) return 0;
+      if (t >= 0.99) return 1;
+      if (t < 0.35) return 1 - Math.pow(1 - (t / 0.35), 3);
+      var decay = Math.exp(-8 * (t - 0.35));
+      return 1 + Math.sin((t - 0.35) * 42) * 0.14 * decay;
+    }
+    if (type === "strobe") {
+      if (t <= 0.01) return 0;
+      if (t >= 0.99) return 1;
+      return t < 0.45 ? (Math.floor(t * 16) % 2 === 0 ? 1 : 0) : 1;
+    }
     return t;
   }
 
@@ -341,6 +359,90 @@
         el.style.textShadow = inv > 0.03 ? (splitPx + "px 0 #ff2a6d, -" + splitPx + "px 0 #05d9e8") : "none";
         opacity = clamp01(p * 1.6);
         break;
+      // ---- NEW PACK 5: BRUTALIST & PRINT ----
+      case "hard-snap":
+        transform = "translate3d(0," + (inv * 24).toFixed(1) + "px,0) scale(" + (1 + inv * 0.25).toFixed(3) + ")";
+        opacity = p > 0.05 ? 1 : 0;
+        break;
+      case "archival-cut":
+        var tilt = (unitIdx % 2 === 0 ? -1 : 1) * inv * 12;
+        transform = "translate3d(0," + (-inv * 20).toFixed(1) + "px,0) rotate(" + tilt.toFixed(1) + "deg)";
+        opacity = p > 0.05 ? 1 : 0;
+        break;
+      case "block-wipe":
+        opacity = p > 0.45 ? 1 : 0.01;
+        var bw = p < 0.5 ? Math.round((p / 0.5) * 100) : Math.round(((1 - p) / 0.5) * 100);
+        el.style.padding = "2px 6px";
+        el.style.background = p < 0.98 ? ("linear-gradient(90deg, #f4f4f8 " + bw + "%, transparent " + bw + "%)") : "transparent";
+        el.style.color = p < 0.5 ? "transparent" : "#f4f4f8";
+        break;
+      // ---- NEW PACK 6: SCI-FI & HUD ----
+      case "terminal-cursor":
+        opacity = 1;
+        var charsShown = Math.floor(clamp01(p) * origChar.length);
+        var blink = Math.floor(nowMs / 360) % 2 === 0 ? "_" : "\u00A0";
+        el.textContent = origChar.slice(0, charsShown) + blink;
+        el.style.color = "#6ee7b7";
+        break;
+      case "hud-brackets":
+        opacity = clamp01(p * 1.4);
+        el.style.padding = "2px 8px";
+        el.style.borderLeft = "2px solid rgba(5, 217, 232, " + clamp01(p).toFixed(2) + ")";
+        el.style.borderRight = "2px solid rgba(5, 217, 232, " + clamp01(p).toFixed(2) + ")";
+        transform = "scaleX(" + (0.4 + 0.6 * clamp01(p)).toFixed(3) + ")";
+        break;
+      case "hologram":
+        opacity = p >= 0.5 ? 0.92 : 0;
+        el.style.color = "#38bdf8";
+        el.style.textShadow = "0 0 8px rgba(56, 189, 248, 0.7)";
+        filter = inv > 0.05 ? "blur(" + (inv * 3).toFixed(1) + "px)" : "none";
+        break;
+      case "target-lock":
+        letterSpacing = (0.06 + inv * 0.5).toFixed(3) + "em";
+        opacity = clamp01(p * 1.4);
+        if (p > 0.04 && p < 0.85) {
+          var tIdx = Math.floor((nowMs / 40 + unitIdx * 7)) % SCRAMBLE_CHARS.length;
+          el.textContent = origChar === " " ? " " : SCRAMBLE_CHARS.charAt(tIdx);
+        } else {
+          el.textContent = origChar;
+        }
+        break;
+      // ---- NEW PACK 7: ANIME & IMPACT ----
+      case "beat-slam":
+        var scBeat = 1 + (1 - p) * 0.85;
+        transform = "scale(" + Math.max(0.85, scBeat).toFixed(3) + ")";
+        filter = inv > 0.05 ? "blur(" + (Math.abs(inv) * 6).toFixed(1) + "px)" : "none";
+        opacity = p > 0.02 ? 1 : 0;
+        break;
+      case "shear-slice":
+        var dirS = unitIdx % 2 === 0 ? 1 : -1;
+        transform = "translate3d(" + (dirS * inv * 38).toFixed(1) + "px,0,0) skewX(" + (-inv * 34).toFixed(1) + "deg)";
+        opacity = clamp01(p * 1.5);
+        break;
+      case "strobe":
+        opacity = p >= 0.5 ? 1 : 0;
+        transform = "scale(" + (1 + (1 - clamp01(p)) * 0.25).toFixed(3) + ")";
+        break;
+      // ---- NEW PACK 8: RETRO & VHS ----
+      case "crt-on":
+        var sxCrt = 1 + inv * 1.3;
+        var syCrt = 0.05 + 0.95 * clamp01(p);
+        transform = "scale(" + sxCrt.toFixed(3) + "," + syCrt.toFixed(3) + ")";
+        el.style.textShadow = "0 0 10px rgba(255,255,255,0.65)";
+        opacity = p > 0.02 ? 1 : 0;
+        break;
+      case "retro-stutter":
+        transform = "scale(" + Math.max(0, p).toFixed(3) + ") rotate(" + (-inv * 8).toFixed(1) + "deg)";
+        el.style.textShadow = "3px 3px 0 #ff2a6d";
+        opacity = p > 0.05 ? 1 : 0;
+        break;
+      case "loop-vhs":
+        var vx = Math.sin(nowMs * 0.015) * 3.5 + (Math.sin(nowMs * 0.09) > 0.92 ? 6 : 0);
+        var vy = Math.cos(nowMs * 0.021) * 1.2;
+        transform = "translate3d(" + vx.toFixed(1) + "px," + vy.toFixed(1) + "px,0) skewX(" + (vx * 0.7).toFixed(1) + "deg)";
+        el.style.textShadow = "2px 0 rgba(255,42,109,0.65), -2px 0 rgba(5,217,232,0.65)";
+        opacity = 1;
+        break;
       default:
         opacity = clamp01(p);
     }
@@ -369,6 +471,8 @@
       u.style.padding = "";
       u.style.paddingBottom = "";
       u.style.borderRadius = "";
+      u.style.borderLeft = "";
+      u.style.borderRight = "";
       u.style.textShadow = "";
       if (u.dataset.char) {
         u.textContent = u.dataset.char;
@@ -550,6 +654,11 @@
         badgeNum.className = "badge-num";
         badgeNum.textContent = "DATA";
         stage.appendChild(badgeNum);
+      } else if (preset.isTerminal) {
+        var badgeTerm = document.createElement("span");
+        badgeTerm.className = "badge-term";
+        badgeTerm.textContent = "TERM";
+        stage.appendChild(badgeTerm);
       }
 
       // Favorite star
@@ -568,6 +677,7 @@
       stage.addEventListener("click", function () {
         if (preset.isLoop) applyPreset(preset, "fx");
         else if (preset.isCounter) applyPreset(preset, "counter");
+        else if (preset.isTerminal) applyPreset(preset, "terminal");
         else applyPreset(preset, "in");
       });
 
@@ -583,7 +693,7 @@
       titleRow.appendChild(title);
 
       var actions = document.createElement("div");
-      actions.className = "card-actions" + (preset.isLoop || preset.isCounter ? " single-action" : "");
+      actions.className = "card-actions" + (preset.isLoop || preset.isCounter || preset.isTerminal ? " single-action" : "");
 
       if (preset.isLoop) {
         var btnFx = document.createElement("button");
@@ -599,6 +709,13 @@
         btnCounter.title = "Animate Source Text number from 0 to target value";
         btnCounter.addEventListener("click", function () { applyPreset(preset, "counter"); });
         actions.appendChild(btnCounter);
+      } else if (preset.isTerminal) {
+        var btnTerm = document.createElement("button");
+        btnTerm.className = "apply-btn btn-term";
+        btnTerm.textContent = "APPLY TERMINAL";
+        btnTerm.title = "Type out text with a blinking cursor";
+        btnTerm.addEventListener("click", function () { applyPreset(preset, "terminal"); });
+        actions.appendChild(btnTerm);
       } else {
         var btnIn = document.createElement("button");
         btnIn.className = "apply-btn btn-in";
