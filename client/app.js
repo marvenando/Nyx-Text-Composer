@@ -7,6 +7,7 @@
   var presets = window.TEXT_COMPOSER_PRESETS || [];
 
   var STORAGE_FAVS = "tc_favorites_v1";
+  var STORAGE_TOKEN = "tc_github_token_v1";
   var state = {
     category: "all",
     search: "",
@@ -47,6 +48,7 @@
   var elOptStagger = document.getElementById("optStagger");
   var elValStagger = document.getElementById("valStagger");
   var elOptReverse = document.getElementById("optReverse");
+  var elOptGithubToken = document.getElementById("optGithubToken");
   var elStatusDot = document.getElementById("statusDot");
   var elStatusText = document.getElementById("statusText");
 
@@ -791,6 +793,22 @@
   });
 
   // ==================== GITHUB 1-CLICK AUTO-UPDATER ====================
+  function loadToken() {
+    try {
+      return (localStorage.getItem(STORAGE_TOKEN) || "").trim();
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function saveToken(val) {
+    try {
+      var clean = String(val || "").trim();
+      if (clean) localStorage.setItem(STORAGE_TOKEN, clean);
+      else localStorage.removeItem(STORAGE_TOKEN);
+    } catch (e) {}
+  }
+
   function isRepoConfigured() {
     return config.githubRepo && config.githubRepo.indexOf("YOUR_USERNAME") === -1 && config.githubRepo.indexOf("/") !== -1;
   }
@@ -807,8 +825,21 @@
     return 0;
   }
 
-  function getRawUrl(relPath) {
-    return "https://raw.githubusercontent.com/" + config.githubRepo + "/" + (config.branch || "main") + "/" + relPath + "?t=" + Date.now();
+  function fetchRepoFile(relPath) {
+    var token = loadToken();
+    var branch = config.branch || "main";
+    if (token) {
+      var apiUrl = "https://api.github.com/repos/" + config.githubRepo + "/contents/" + relPath + "?ref=" + encodeURIComponent(branch) + "&t=" + Date.now();
+      return fetch(apiUrl, {
+        headers: {
+          "Authorization": "Bearer " + token,
+          "Accept": "application/vnd.github.raw+json",
+          "X-GitHub-Api-Version": "2022-11-28"
+        }
+      });
+    }
+    var rawUrl = "https://raw.githubusercontent.com/" + config.githubRepo + "/" + branch + "/" + relPath + "?t=" + Date.now();
+    return fetch(rawUrl);
   }
 
   function getNodeRequire() {
@@ -830,9 +861,17 @@
       setStatus("Checking GitHub (" + config.githubRepo + ") for updates...", "");
     }
 
-    fetch(getRawUrl("package.json"))
+    fetchRepoFile("package.json")
       .then(function (resp) {
-        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        if (!resp.ok) {
+          if ((resp.status === 404 || resp.status === 401 || resp.status === 403) && !loadToken()) {
+            throw new Error("Private repo — paste your read-only Update Token in Apply Settings.");
+          }
+          if (resp.status === 401 || resp.status === 403) {
+            throw new Error("Invalid or expired Update Token (HTTP " + resp.status + ").");
+          }
+          throw new Error("HTTP " + resp.status);
+        }
         return resp.json();
       })
       .then(function (remotePkg) {
@@ -884,7 +923,7 @@
 
     Promise.all(
       files.map(function (relPath) {
-        return fetch(getRawUrl(relPath)).then(function (r) {
+        return fetchRepoFile(relPath).then(function (r) {
           if (!r.ok) throw new Error("Failed " + relPath + " (HTTP " + r.status + ")");
           return r.text().then(function (txt) {
             return { relPath: relPath, content: txt };
@@ -918,8 +957,17 @@
       });
   }
 
+  if (elOptGithubToken) {
+    elOptGithubToken.value = loadToken();
+    elOptGithubToken.addEventListener("change", function () {
+      saveToken(elOptGithubToken.value);
+      setStatus(elOptGithubToken.value.trim() ? "Update Token saved locally." : "Update Token cleared.", "ok");
+    });
+  }
+
   if (elBtnUpdate) {
     elBtnUpdate.addEventListener("click", function (e) {
+      if (elOptGithubToken) saveToken(elOptGithubToken.value);
       checkForUpdates(false, !!e.shiftKey);
     });
   }

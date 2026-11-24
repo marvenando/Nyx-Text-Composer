@@ -45,9 +45,16 @@ A Mister Horse-inspired **Text Presets Plugin Panel** for **Adobe After Effects 
 3. Click **IN**, **OUT**, or **BOTH** on any preset card (or click the preview box to apply **IN**).
 4. Adjust timing anytime in the layer's **Effect Controls** panel (`[TC IN]` / `[TC OUT]`), or drag the layer's In/Out points on the timeline.
 
-## 1-Click In-Panel Updates (GitHub)
+## 1-Click In-Panel Updates (Private GitHub Repo)
 Connected to **`marvenando/nyx-text-composer`** in **`client/config.js`**.
-Whenever you add presets or fixes:
+
+### One-Time Setup for Private Repo Updates
+1. On GitHub, go to **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+2. Under **Repository access**, choose **Only select repositories** → **`marvenando/nyx-text-composer`**.
+3. Under **Repository permissions**, set **Contents** to **Read-only**, then generate the token.
+4. In **Nyx Text Composer** (both you and your friend): open **Apply Settings** at the bottom of the panel and paste the token into **Update Token** *(stored locally on each machine, never committed to Git)*.
+
+### Pushing Updates
 1. Bump `"version"` in both **`client/config.js`** and **`package.json`**.
 2. Commit and push to `main`.
 3. Anyone using **Nyx Text Composer** (Windows or macOS) will see a green dot on the **Update** button in the top bar—clicking it downloads the latest files and hot-reloads the panel automatically!
