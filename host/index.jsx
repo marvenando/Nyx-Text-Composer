@@ -74,6 +74,33 @@ function tc_removeMask(layer) {
     }
 }
 
+// ==================== TIMELINE MARKERS ("In" / "Out") ====================
+function tc_ensureMarker(layer, commentName, targetTime) {
+    var mProp = layer.property("ADBE Marker");
+    if (!mProp) return;
+    for (var i = 1; i <= mProp.numKeys; i++) {
+        var mv = mProp.keyValue(i);
+        if (mv && mv.comment === commentName) {
+            return; // Keep user's existing marker timing when swapping presets
+        }
+    }
+    var minT = layer.inPoint + 0.05;
+    var maxT = Math.max(minT, layer.outPoint - 0.05);
+    var t = targetTime < minT ? minT : (targetTime > maxT ? maxT : targetTime);
+    mProp.setValueAtTime(t, new MarkerValue(commentName));
+}
+
+function tc_removeMarker(layer, commentName) {
+    var mProp = layer.property("ADBE Marker");
+    if (!mProp) return;
+    for (var i = mProp.numKeys; i >= 1; i--) {
+        var mv = mProp.keyValue(i);
+        if (mv && mv.comment === commentName) {
+            mProp.removeKey(i);
+        }
+    }
+}
+
 function tc_removeLinkedBg(comp, layer) {
     for (var i = comp.numLayers; i >= 1; i--) {
         var l = comp.layer(i);
@@ -302,12 +329,14 @@ function tc_ensureBgShape(comp, layer, shapeType, bgColor, direction) {
     ];
     if (useIn) {
         scaleLines.push('var dIn = 0.6; try { dIn = Math.max(0.05, p.effect("' + TC_PREFIX_IN + ' Duration (s)")("Slider")); } catch(e) {}');
+        scaleLines.push('try { dIn = Math.max(0.05, p.marker.key("In").time - p.inPoint); } catch(e) {}');
         scaleLines.push("var tIn = clamp((time - p.inPoint) / (dIn * 0.75), 0, 1);");
         scaleLines.push("var eIn = (tIn >= 1) ? 1 : (tIn <= 0 ? 0 : 1 - Math.pow(2, -10 * tIn));");
         scaleLines.push("s *= eIn;");
     }
     if (useOut) {
         scaleLines.push('var dOut = 0.6; try { dOut = Math.max(0.05, p.effect("' + TC_PREFIX_OUT + ' Duration (s)")("Slider")); } catch(e) {}');
+        scaleLines.push('try { dOut = Math.max(0.05, p.outPoint - p.marker.key("Out").time); } catch(e) {}');
         scaleLines.push("var tOut = clamp((time - (p.outPoint - dOut)) / (dOut * 0.75), 0, 1);");
         scaleLines.push("var eOut = 1 - ((tOut >= 1) ? 1 : (tOut <= 0 ? 0 : 1 - Math.pow(2, -10 * tOut)));");
         scaleLines.push("s *= eOut;");
@@ -317,6 +346,7 @@ function tc_ensureBgShape(comp, layer, shapeType, bgColor, direction) {
         var wbLines = [
             "var p = thisLayer.parent;",
             'var dIn = 0.8; try { dIn = Math.max(0.1, p.effect("' + TC_PREFIX_IN + ' Duration (s)")("Slider")); } catch(e) {}',
+            'try { dIn = Math.max(0.1, p.marker.key("In").time - p.inPoint); } catch(e) {}',
             "var t = clamp((time - p.inPoint) / dIn, 0, 1);",
             "var sx = t < 0.5 ? (1 - Math.pow(2, -10 * (t * 2))) : (1 - (1 - Math.pow(2, -10 * ((t - 0.5) * 2))));",
             "if (t <= 0 || t >= 1) sx = 0;",
@@ -392,11 +422,13 @@ function tc_applyRgbHit(layer, direction) {
     var lines = ["var amt = 0;"];
     if (useIn) {
         lines.push('var dIn = 0.5; try { dIn = Math.max(0.05, effect("' + TC_PREFIX_IN + ' Duration (s)")("Slider")); } catch(e) {}');
+        lines.push('try { dIn = Math.max(0.05, marker.key("In").time - inPoint); } catch(e) {}');
         lines.push("var tIn = clamp((time - inPoint) / (dIn * 0.7), 0, 1);");
         lines.push("if (tIn > 0 && tIn < 1) amt = Math.max(amt, Math.sin(tIn * Math.PI) * 14);");
     }
     if (useOut) {
         lines.push('var dOut = 0.5; try { dOut = Math.max(0.05, effect("' + TC_PREFIX_OUT + ' Duration (s)")("Slider")); } catch(e) {}');
+        lines.push('try { dOut = Math.max(0.05, outPoint - marker.key("Out").time); } catch(e) {}');
         lines.push("var tOut = clamp((time - (outPoint - dOut)) / (dOut * 0.7), 0, 1);");
         lines.push("if (tOut > 0 && tOut < 1) amt = Math.max(amt, Math.sin(tOut * Math.PI) * 14);");
     }
@@ -443,6 +475,11 @@ function tc_enablePerChar3D(comp, layer) {
 function tc_buildSelectorExpression(prefix, isOut, easeType, randomOrder, centerOut, isKaraoke) {
     var lines = [];
     lines.push('var dur = Math.max(0.05, effect("' + prefix + ' Duration (s)")("Slider"));');
+    if (isOut) {
+        lines.push('try { dur = Math.max(0.05, outPoint - marker.key("Out").time); } catch (e) {}');
+    } else {
+        lines.push('try { dur = Math.max(0.05, marker.key("In").time - inPoint); } catch (e) {}');
+    }
     lines.push('var stag = clamp(effect("' + prefix + ' Stagger (%)")("Slider"), 0, 100) / 100;');
     lines.push('var ovr = Math.max(0, effect("' + prefix + ' Overshoot")("Slider")) / 100;');
     lines.push('var rev = effect("' + prefix + ' Reverse Order")("Checkbox") == 1;');
@@ -617,6 +654,13 @@ function tc_applyDirection(comp, layer, cfg, isOut) {
 
     tc_ensureControls(layer, prefix, cfg);
 
+    // Add draggable timeline marker ("In" or "Out")
+    if (isOut) {
+        tc_ensureMarker(layer, "Out", layer.outPoint - (cfg.duration || 0.8));
+    } else {
+        tc_ensureMarker(layer, "In", layer.inPoint + (cfg.duration || 0.8));
+    }
+
     var textProp = layer.property("ADBE Text Properties");
     var animators = textProp.property("ADBE Text Animators");
     var animator = animators.addProperty("ADBE Text Animator");
@@ -747,6 +791,7 @@ function tc_applyCounter(layer, cfg) {
     tc_addSlider(effects, TC_PREFIX_NUM + " End Value", targetVal);
     tc_addSlider(effects, TC_PREFIX_NUM + " Decimals", decimals);
     tc_addCheckbox(effects, TC_PREFIX_NUM + " Commas", true);
+    tc_ensureMarker(layer, "In", layer.inPoint + (cfg.duration || 1.5));
 
     var safePre = tc_escapeStr(prefix);
     var safeSuf = tc_escapeStr(suffix);
@@ -754,6 +799,7 @@ function tc_applyCounter(layer, cfg) {
     var expr = [
         "/*TC_COUNTER*/",
         'var dur = Math.max(0.05, effect("' + TC_PREFIX_NUM + ' Duration (s)")("Slider"));',
+        'try { dur = Math.max(0.05, marker.key("In").time - inPoint); } catch (e) {}',
         'var v0 = effect("' + TC_PREFIX_NUM + ' Start Value")("Slider");',
         'var v1 = effect("' + TC_PREFIX_NUM + ' End Value")("Slider");',
         'var dec = Math.max(0, Math.round(effect("' + TC_PREFIX_NUM + ' Decimals")("Slider")));',
@@ -782,12 +828,14 @@ function tc_applyTerminal(layer, cfg) {
     var effects = layer.property("ADBE Effect Parade");
     tc_addSlider(effects, TC_PREFIX_TERM + " Duration (s)", cfg.duration || 1.2);
     tc_addSlider(effects, TC_PREFIX_TERM + " Blink Speed (Hz)", 2.5);
+    tc_ensureMarker(layer, "In", layer.inPoint + (cfg.duration || 1.2));
 
     var cursor = (cfg.ae && cfg.ae.cursorChar) ? tc_escapeStr(cfg.ae.cursorChar) : "_";
 
     var expr = [
         "/*TC_TERMINAL*/",
         'var dur = Math.max(0.05, effect("' + TC_PREFIX_TERM + ' Duration (s)")("Slider"));',
+        'try { dur = Math.max(0.05, marker.key("In").time - inPoint); } catch (e) {}',
         'var blinkHz = Math.max(0.2, effect("' + TC_PREFIX_TERM + ' Blink Speed (Hz)")("Slider"));',
         "var full = value;",
         "var t = clamp((time - inPoint) / dur, 0, 1);",
@@ -894,6 +942,8 @@ function TextComposer_clearSelected() {
                 tc_removeByPrefix(selected[i], TC_PREFIX_EFX);
                 tc_removeByPrefix(selected[i], TC_PREFIX_RGB);
                 tc_removeMask(selected[i]);
+                tc_removeMarker(selected[i], "In");
+                tc_removeMarker(selected[i], "Out");
                 tc_removeLinkedBg(comp, selected[i]);
                 tc_clearCounter(selected[i]);
                 count++;

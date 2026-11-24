@@ -21,7 +21,7 @@
   - **Anime & Impact** — Beat Impact Slam, Cyber Tracking Jitter, Shear Slice Snap, Flash Strobe Punch
   - **Retro & VHS** — CRT Power-On, 80s Stutter Pop, VHS Tracking Wobble *(Loop FX)*, Retro Tape Bleed
 - **Live Animated Previews:** Hover any card (or toggle **Auto-Play**) to preview the animation in real time.
-- **Non-Destructive IN / OUT / BOTH:** Animations are anchored to the layer's `In Point` and `Out Point` via Expression Selectors—trimming or sliding your text layer automatically shifts the animations with zero keyframes to move.
+- **Draggable Timeline Markers (`In` / `Out`):** Applying an IN or OUT animation automatically adds a clean **`In`** or **`Out`** layer marker on the timeline—drag it left or right to speed up or slow down the animation visually (deletes cleanly on `Clear`, and falls back to the Effect Control slider if removed).
 - **Live Effect Controls:** Every applied animation adds native sliders in **Effect Controls** (`Duration`, `Stagger %`, `Overshoot`, `Reverse Order`).
 - **One-Click Clear:** Remove all Text Composer animations and masks from selected layers without touching your font, styling, or other effects.
 
