@@ -49,8 +49,9 @@
   var elValStagger = document.getElementById("valStagger");
   var elOptReverse = document.getElementById("optReverse");
   var elOptGithubToken = document.getElementById("optGithubToken");
-  var elStatusDot = document.getElementById("statusDot");
+  var elStatusTag = document.getElementById("statusTag");
   var elStatusText = document.getElementById("statusText");
+  var prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function loadFavorites() {
     try {
@@ -69,7 +70,14 @@
 
   function setStatus(msg, level) {
     elStatusText.textContent = msg;
-    elStatusDot.className = "status-dot" + (level ? " " + level : "");
+    if (!level) {
+      elStatusTag.className = "status-tag hidden";
+      elStatusTag.textContent = "";
+      return;
+    }
+    var labels = { ok: "DONE", warn: "NOTE", err: "ERROR" };
+    elStatusTag.textContent = labels[level] || "";
+    elStatusTag.className = "status-tag " + level;
   }
 
   // ==================== EASING MATH FOR LIVE PREVIEWS ====================
@@ -546,7 +554,9 @@
     elCategoryBar.innerHTML = "";
     categories.forEach(function (cat) {
       var btn = document.createElement("button");
-      btn.className = "cat-pill" + (state.category === cat.id ? " active" : "");
+      btn.type = "button";
+      btn.className = "cat-tab" + (state.category === cat.id ? " active" : "");
+      btn.setAttribute("aria-pressed", state.category === cat.id ? "true" : "false");
       btn.textContent = cat.label;
       btn.addEventListener("click", function () {
         state.category = cat.id;
@@ -621,59 +631,38 @@
     stopAllPreviews();
     var list = getFilteredPresets();
     elGrid.innerHTML = "";
-    elCount.textContent = list.length + " Preset" + (list.length === 1 ? "" : "s");
+    elCount.textContent = list.length + " preset" + (list.length === 1 ? "" : "s");
 
     if (list.length === 0) {
+      var elEmptyMsg = document.getElementById("emptyMessage");
+      if (elEmptyMsg) {
+        if (state.favoritesOnly && state.favorites.length === 0) {
+          elEmptyMsg.textContent = "No favorites saved yet. Click the star on any preset card to save it.";
+        } else {
+          elEmptyMsg.textContent = "No presets match your current search or category filter.";
+        }
+      }
       elEmpty.classList.remove("hidden");
       return;
     }
     elEmpty.classList.add("hidden");
 
     list.forEach(function (preset) {
-      var card = document.createElement("div");
+      var card = document.createElement("article");
       card.className = "preset-card";
 
-      // Stage
-      var stage = document.createElement("div");
+      // Semantic Preview Wrapper (no nested buttons: stage button + sibling fav button)
+      var previewWrap = document.createElement("div");
+      previewWrap.className = "preview-wrap";
+
+      var stage = document.createElement("button");
+      stage.type = "button";
       stage.className = "preview-stage";
-      stage.title = "Click to apply IN animation";
+      var defaultModeLabel = preset.isLoop ? "loop effect" : (preset.isCounter ? "number counter" : (preset.isTerminal ? "terminal cursor" : "In animation"));
+      stage.setAttribute("aria-label", "Apply " + preset.name + " as " + defaultModeLabel);
+      stage.title = "Click to apply " + preset.name;
       stage.appendChild(buildPreviewSpans(preset));
 
-      if (preset.ae && preset.ae.perChar3D) {
-        var badge = document.createElement("span");
-        badge.className = "badge-3d";
-        badge.textContent = "3D";
-        stage.appendChild(badge);
-      } else if (preset.isLoop) {
-        var badgeFx = document.createElement("span");
-        badgeFx.className = "badge-fx";
-        badgeFx.textContent = "LOOP";
-        stage.appendChild(badgeFx);
-      } else if (preset.isCounter) {
-        var badgeNum = document.createElement("span");
-        badgeNum.className = "badge-num";
-        badgeNum.textContent = "DATA";
-        stage.appendChild(badgeNum);
-      } else if (preset.isTerminal) {
-        var badgeTerm = document.createElement("span");
-        badgeTerm.className = "badge-term";
-        badgeTerm.textContent = "TERM";
-        stage.appendChild(badgeTerm);
-      }
-
-      // Favorite star
-      var isFav = state.favorites.indexOf(preset.id) !== -1;
-      var favBtn = document.createElement("button");
-      favBtn.className = "fav-btn" + (isFav ? " is-fav" : "");
-      favBtn.title = isFav ? "Remove from Favorites" : "Add to Favorites";
-      favBtn.innerHTML = '<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M8 1.4l2.06 4.18 4.61.67-3.34 3.25.79 4.6L8 11.93 3.88 14.1l.79-4.6L1.33 6.25l4.61-.67L8 1.4z"/></svg>';
-      favBtn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        toggleFavorite(preset.id);
-      });
-      stage.appendChild(favBtn);
-
-      // Clicking stage applies default mode
       stage.addEventListener("click", function () {
         if (preset.isLoop) applyPreset(preset, "fx");
         else if (preset.isCounter) applyPreset(preset, "counter");
@@ -681,58 +670,100 @@
         else applyPreset(preset, "in");
       });
 
+      previewWrap.appendChild(stage);
+
+      if (preset.ae && preset.ae.perChar3D) {
+        var badge = document.createElement("span");
+        badge.className = "mode-badge";
+        badge.textContent = "3D";
+        previewWrap.appendChild(badge);
+      } else if (preset.isLoop) {
+        var badgeFx = document.createElement("span");
+        badgeFx.className = "mode-badge";
+        badgeFx.textContent = "LOOP";
+        previewWrap.appendChild(badgeFx);
+      } else if (preset.isCounter) {
+        var badgeNum = document.createElement("span");
+        badgeNum.className = "mode-badge";
+        badgeNum.textContent = "DATA";
+        previewWrap.appendChild(badgeNum);
+      } else if (preset.isTerminal) {
+        var badgeTerm = document.createElement("span");
+        badgeTerm.className = "mode-badge";
+        badgeTerm.textContent = "TERM";
+        previewWrap.appendChild(badgeTerm);
+      }
+
+      // Favorite star (sibling button, accessible name & aria-pressed)
+      var isFav = state.favorites.indexOf(preset.id) !== -1;
+      var favBtn = document.createElement("button");
+      favBtn.type = "button";
+      favBtn.className = "fav-btn" + (isFav ? " is-fav" : "");
+      favBtn.setAttribute("aria-label", (isFav ? "Remove " : "Save ") + preset.name + (isFav ? " from favorites" : " to favorites"));
+      favBtn.setAttribute("aria-pressed", isFav ? "true" : "false");
+      favBtn.title = isFav ? "Remove from favorites" : "Save to favorites";
+      favBtn.innerHTML = '<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M8 1.4l2.06 4.18 4.61.67-3.34 3.25.79 4.6L8 11.93 3.88 14.1l.79-4.6L1.33 6.25l4.61-.67L8 1.4z"/></svg>';
+      favBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        toggleFavorite(preset.id);
+      });
+      previewWrap.appendChild(favBtn);
+
       // Card Meta & Buttons
       var meta = document.createElement("div");
       meta.className = "card-meta";
 
-      var titleRow = document.createElement("div");
-      titleRow.className = "card-title-row";
       var title = document.createElement("div");
       title.className = "card-title";
       title.textContent = preset.name;
-      titleRow.appendChild(title);
 
       var actions = document.createElement("div");
       actions.className = "card-actions" + (preset.isLoop || preset.isCounter || preset.isTerminal ? " single-action" : "");
 
       if (preset.isLoop) {
         var btnFx = document.createElement("button");
-        btnFx.className = "apply-btn btn-fx";
+        btnFx.type = "button";
+        btnFx.className = "apply-btn btn-primary";
         btnFx.textContent = "APPLY LOOP FX";
-        btnFx.title = "Apply continuous effect (stacks with IN and OUT presets)";
+        btnFx.title = "Apply continuous effect (stacks with In and Out presets)";
         btnFx.addEventListener("click", function () { applyPreset(preset, "fx"); });
         actions.appendChild(btnFx);
       } else if (preset.isCounter) {
         var btnCounter = document.createElement("button");
-        btnCounter.className = "apply-btn btn-counter";
+        btnCounter.type = "button";
+        btnCounter.className = "apply-btn btn-primary";
         btnCounter.textContent = "APPLY COUNTER";
         btnCounter.title = "Animate Source Text number from 0 to target value";
         btnCounter.addEventListener("click", function () { applyPreset(preset, "counter"); });
         actions.appendChild(btnCounter);
       } else if (preset.isTerminal) {
         var btnTerm = document.createElement("button");
-        btnTerm.className = "apply-btn btn-term";
+        btnTerm.type = "button";
+        btnTerm.className = "apply-btn btn-primary";
         btnTerm.textContent = "APPLY TERMINAL";
         btnTerm.title = "Type out text with a blinking cursor";
         btnTerm.addEventListener("click", function () { applyPreset(preset, "terminal"); });
         actions.appendChild(btnTerm);
       } else {
         var btnIn = document.createElement("button");
-        btnIn.className = "apply-btn btn-in";
+        btnIn.type = "button";
+        btnIn.className = "apply-btn btn-primary";
         btnIn.textContent = "IN";
-        btnIn.title = "Apply as IN animation (anchored to layer In Point)";
+        btnIn.title = "Apply as In animation with draggable In marker";
         btnIn.addEventListener("click", function () { applyPreset(preset, "in"); });
 
         var btnOut = document.createElement("button");
+        btnOut.type = "button";
         btnOut.className = "apply-btn btn-out";
         btnOut.textContent = "OUT";
-        btnOut.title = "Apply as OUT animation (anchored to layer Out Point)";
+        btnOut.title = "Apply as Out animation with draggable Out marker";
         btnOut.addEventListener("click", function () { applyPreset(preset, "out"); });
 
         var btnBoth = document.createElement("button");
+        btnBoth.type = "button";
         btnBoth.className = "apply-btn btn-both";
         btnBoth.textContent = "BOTH";
-        btnBoth.title = "Apply both IN and OUT animations";
+        btnBoth.title = "Apply both In and Out animations";
         btnBoth.addEventListener("click", function () { applyPreset(preset, "both"); });
 
         actions.appendChild(btnIn);
@@ -740,27 +771,29 @@
         actions.appendChild(btnBoth);
       }
 
-      meta.appendChild(titleRow);
+      meta.appendChild(title);
       meta.appendChild(actions);
 
-      card.appendChild(stage);
+      card.appendChild(previewWrap);
       card.appendChild(meta);
 
-      // Hover preview triggers
+      // Hover & keyboard focus preview triggers
       card.addEventListener("mouseenter", function () {
-        if (!state.autoPlayAll) {
-          startCardPreview(card, preset);
-        }
+        if (!state.autoPlayAll) startCardPreview(card, preset);
       });
       card.addEventListener("mouseleave", function () {
-        if (!state.autoPlayAll) {
-          stopCardPreview(card, preset);
-        }
+        if (!state.autoPlayAll) stopCardPreview(card, preset);
+      });
+      stage.addEventListener("focus", function () {
+        if (!state.autoPlayAll) startCardPreview(card, preset);
+      });
+      stage.addEventListener("blur", function () {
+        if (!state.autoPlayAll) stopCardPreview(card, preset);
       });
 
       elGrid.appendChild(card);
 
-      if (state.autoPlayAll) {
+      if (state.autoPlayAll && !prefersReducedMotion) {
         startCardPreview(card, preset);
       }
     });
@@ -857,12 +890,14 @@
   elBtnFavFilter.addEventListener("click", function () {
     state.favoritesOnly = !state.favoritesOnly;
     elBtnFavFilter.classList.toggle("active", state.favoritesOnly);
+    elBtnFavFilter.setAttribute("aria-pressed", state.favoritesOnly ? "true" : "false");
     renderGrid();
   });
 
   elBtnAutoPlay.addEventListener("click", function () {
     state.autoPlayAll = !state.autoPlayAll;
     elBtnAutoPlay.classList.toggle("active", state.autoPlayAll);
+    elBtnAutoPlay.setAttribute("aria-pressed", state.autoPlayAll ? "true" : "false");
     renderGrid();
   });
 
@@ -982,7 +1017,7 @@
       .then(function (resp) {
         if (!resp.ok) {
           if ((resp.status === 404 || resp.status === 401 || resp.status === 403) && !loadToken()) {
-            throw new Error("Private repo — paste your read-only Update Token in Apply Settings.");
+            throw new Error("Private repo: paste your read-only Update Token in Apply Settings.");
           }
           if (resp.status === 401 || resp.status === 403) {
             throw new Error("Invalid or expired Update Token (HTTP " + resp.status + ").");
@@ -1095,7 +1130,7 @@
   updateSettingsSummary();
 
   if (!csInterface.isCEP()) {
-    setStatus("Browser Preview Mode — hover cards to preview. Install in AE to apply.", "warn");
+    setStatus("Browser preview mode: hover or focus cards to preview. Open in After Effects to apply.", "warn");
   } else {
     checkForUpdates(true, false);
   }

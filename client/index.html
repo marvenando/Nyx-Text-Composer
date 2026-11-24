@@ -11,31 +11,59 @@
     <!-- Top Header -->
     <header class="topbar">
       <div class="brand">
-        <div class="brand-icon" aria-hidden="true">N</div>
-        <div class="brand-text">
-          <h1>Nyx Text Composer</h1>
-          <span class="subtitle" id="presetCount">64 Presets</span>
-        </div>
+        <h1 class="wordmark">
+          <span class="wordmark-nyx">NYX</span>
+          <span class="wordmark-sub">Text Composer</span>
+        </h1>
+        <span class="preset-count" id="presetCount">64 presets</span>
       </div>
 
       <div class="topbar-actions">
-        <button class="icon-btn" id="btnUpdate" title="Check for Updates (Shift+Click to force update)">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+        <button
+          type="button"
+          class="icon-btn"
+          id="btnUpdate"
+          aria-label="Check for updates"
+          title="Check for updates (Shift+Click to force update)"
+        >
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
             <path d="M8 2a6 6 0 0 1 5.66 4H12l2.5 3L17 6h-1.85A7.5 7.5 0 1 0 15.2 10h-1.6A6 6 0 1 1 8 2z" transform="scale(0.88) translate(0.5 0.5)"/>
           </svg>
-          <span class="update-dot hidden" id="updateDot"></span>
+          <span class="update-dot hidden" id="updateDot" aria-hidden="true"></span>
         </button>
-        <button class="icon-btn" id="btnAutoPlay" title="Toggle Auto-Play Previews">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+
+        <button
+          type="button"
+          class="icon-btn"
+          id="btnAutoPlay"
+          aria-label="Auto-play all previews"
+          aria-pressed="false"
+          title="Auto-play all previews"
+        >
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
             <path d="M4 2.5l9 5.5-9 5.5V2.5z"/>
           </svg>
         </button>
-        <button class="icon-btn" id="btnFavFilter" title="Show Favorites Only">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+
+        <button
+          type="button"
+          class="icon-btn"
+          id="btnFavFilter"
+          aria-label="Show favorites only"
+          aria-pressed="false"
+          title="Show favorites only"
+        >
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
             <path d="M8 1.4l2.06 4.18 4.61.67-3.34 3.25.79 4.6L8 11.93 3.88 14.1l.79-4.6L1.33 6.25l4.61-.67L8 1.4z"/>
           </svg>
         </button>
-        <button class="danger-btn" id="btnClearLayer" title="Remove Text Composer animations from selected layer(s)">
+
+        <button
+          type="button"
+          class="clear-btn"
+          id="btnClearLayer"
+          title="Remove Nyx Text Composer animations from selected layers"
+        >
           Clear
         </button>
       </div>
@@ -43,8 +71,9 @@
 
     <!-- Search Bar -->
     <div class="search-row">
+      <label class="sr-only" for="searchInput">Search text presets</label>
       <div class="search-wrap">
-        <svg class="search-icon" viewBox="0 0 16 16" width="13" height="13" fill="currentColor">
+        <svg class="search-icon" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true">
           <path d="M11.7 10.3l3.1 3.1-1.4 1.4-3.1-3.1A5.9 5.9 0 0 1 6.5 13 6.5 6.5 0 1 1 13 6.5a5.9 5.9 0 0 1-1.3 3.8zM6.5 11a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9z"/>
         </svg>
         <input
@@ -53,28 +82,34 @@
           placeholder="Search presets (mask, bounce, 3d, glitch...)"
           autocomplete="off"
         />
-        <button class="clear-search hidden" id="btnClearSearch" title="Clear search">&times;</button>
+        <button
+          type="button"
+          class="clear-search hidden"
+          id="btnClearSearch"
+          aria-label="Clear search"
+          title="Clear search"
+        >&times;</button>
       </div>
     </div>
 
-    <!-- Category Pills -->
+    <!-- Category Tabs -->
     <nav class="categories" id="categoryBar" aria-label="Preset categories"></nav>
 
     <!-- Preset Grid -->
     <main class="grid-container" id="gridContainer">
       <div class="preset-grid" id="presetGrid"></div>
       <div class="empty-state hidden" id="emptyState">
-        <p>No presets match your filter.</p>
-        <button class="secondary-btn" id="btnResetFilters">Reset Filters</button>
+        <p id="emptyMessage">No presets match your current filter.</p>
+        <button type="button" class="secondary-btn" id="btnResetFilters">Reset filters</button>
       </div>
     </main>
 
     <!-- Collapsible Pre-Apply Settings Drawer -->
-    <section class="settings-drawer" id="settingsDrawer">
-      <button class="drawer-toggle" id="btnToggleSettings" aria-expanded="false">
+    <section class="settings-drawer" id="settingsDrawer" aria-label="Apply settings">
+      <button type="button" class="drawer-toggle" id="btnToggleSettings" aria-expanded="false" aria-controls="drawerBody">
         <span>Apply Settings</span>
         <span class="drawer-summary" id="settingsSummary">Auto Dur &middot; Auto Unit</span>
-        <svg class="chevron" viewBox="0 0 16 16" width="12" height="12" fill="currentColor">
+        <svg class="chevron" viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true">
           <path d="M4.5 6l3.5 4 3.5-4h-7z"/>
         </svg>
       </button>
@@ -115,12 +150,12 @@
         </div>
 
         <div class="control-row token-row">
-          <label for="optGithubToken" title="Read-only GitHub token for private repo updates (stored locally only)">Update Token</label>
+          <label for="optGithubToken" title="Optional read-only GitHub token for private repo updates (stored locally only)">Update Token</label>
           <input
             type="password"
             id="optGithubToken"
             class="token-input"
-            placeholder="github_pat_... (private repo)"
+            placeholder="Optional (private repo)"
             autocomplete="off"
           />
         </div>
@@ -128,9 +163,9 @@
     </section>
 
     <!-- Footer Status Bar -->
-    <footer class="statusbar" id="statusBar">
-      <span class="status-dot" id="statusDot"></span>
-      <span class="status-text" id="statusText">Select a Text Layer in After Effects, then click IN / OUT / BOTH.</span>
+    <footer class="statusbar" id="statusBar" role="status" aria-live="polite">
+      <span class="status-tag hidden" id="statusTag"></span>
+      <span class="status-text" id="statusText">Select a Text Layer in After Effects, then click In, Out, or Both.</span>
     </footer>
   </div>
 

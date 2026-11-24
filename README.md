@@ -51,4 +51,3 @@
 4. Adjust timing anytime in the layer's **Effect Controls** panel (`[TC IN]` / `[TC OUT]`), or drag the layer's In/Out points on the timeline.
 =======
 4. Adjust timing anytime in the layer's **Effect Controls** panel (`[TC IN]` / `[TC OUT]`), or drag the layer's In/Out points on the timeline.
->>>>>>> 193117ef6abdf63335892d6e2afdf1a1db9ff16e
