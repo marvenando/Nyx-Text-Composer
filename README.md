@@ -47,4 +47,8 @@
 1. Select one or more **Text Layers** in your active composition.
 2. Browse or search presets in the **Text Composer** panel.
 3. Click **IN**, **OUT**, or **BOTH** on any preset card (or click the preview box to apply **IN**).
+<<<<<<< HEAD
 4. Adjust timing anytime in the layer's **Effect Controls** panel (`[TC IN]` / `[TC OUT]`), or drag the layer's In/Out points on the timeline.
+=======
+4. Adjust timing anytime in the layer's **Effect Controls** panel (`[TC IN]` / `[TC OUT]`), or drag the layer's In/Out points on the timeline.
+>>>>>>> 193117ef6abdf63335892d6e2afdf1a1db9ff16e
