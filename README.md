@@ -1,6 +1,6 @@
 # Nyx Text Composer — After Effects CEP Panel
 
-A Mister Horse-inspired **Text Presets Plugin Panel** for **Adobe After Effects 2024 – 2026** (also compatible with AE 2021–2023).
+**Text Presets Plugin Panel** for **Adobe After Effects 2024 – 2026** (also compatible with AE 2021–2023).
 
 ## Features
 - **48 Curated Text Presets** across 12 categories:
@@ -46,11 +46,11 @@ A Mister Horse-inspired **Text Presets Plugin Panel** for **Adobe After Effects 
 4. Adjust timing anytime in the layer's **Effect Controls** panel (`[TC IN]` / `[TC OUT]`), or drag the layer's In/Out points on the timeline.
 
 ## 1-Click In-Panel Updates (Private GitHub Repo)
-Connected to **`marvenando/nyx-text-composer`** in **`client/config.js`**.
+Connected to **`marvenando/Nyx-Text-Composer`** in **`client/config.js`**.
 
 ### One-Time Setup for Private Repo Updates
 1. On GitHub, go to **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
-2. Under **Repository access**, choose **Only select repositories** → **`marvenando/nyx-text-composer`**.
+2. Under **Repository access**, choose **Only select repositories** → **`marvenando/Nyx-Text-Composer`**.
 3. Under **Repository permissions**, set **Contents** to **Read-only**, then generate the token.
 4. In **Nyx Text Composer** (both you and your friend): open **Apply Settings** at the bottom of the panel and paste the token into **Update Token** *(stored locally on each machine, never committed to Git)*.
 

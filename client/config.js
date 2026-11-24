@@ -8,7 +8,7 @@
  */
 window.TEXT_COMPOSER_CONFIG = {
   version: "1.0.0",
-  githubRepo: "marvenando/nyx-text-composer",
+  githubRepo: "marvenando/Nyx-Text-Composer",
   branch: "main",
   updateFiles: [
     "client/config.js",
