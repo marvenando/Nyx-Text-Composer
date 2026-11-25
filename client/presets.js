@@ -657,7 +657,8 @@ window.TEXT_COMPOSER_PRESETS = [
       loopMode: "hue",
       loopSpeed: 1.2,
       loopIntensity: 100,
-      props: { fillHue: 180 }
+      fxEffect: "crtGlow",
+      props: { fillHue: 360 }
     }
   },
 

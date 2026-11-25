@@ -766,6 +766,17 @@ function tc_applyLoopFX(layer, cfg) {
 
     var textProp = layer.property("ADBE Text Properties");
     var animators = textProp.property("ADBE Text Animators");
+
+    // For Neon Hue Cycle: apply a saturated base fill so white/gray/black text actually shifts color
+    if (mode === "hue") {
+        var baseAnim = animators.addProperty("ADBE Text Animator");
+        baseAnim.name = TC_PREFIX_FX + " Neon Base Fill";
+        var baseProps = baseAnim.property("ADBE Text Animator Properties");
+        if (baseProps.canAddProperty("ADBE Text Fill Color")) {
+            baseProps.addProperty("ADBE Text Fill Color").setValue([1.0, 0.2, 0.45, 1]);
+        }
+    }
+
     var animator = animators.addProperty("ADBE Text Animator");
     animator.name = TC_PREFIX_FX + " " + cfg.name;
 
