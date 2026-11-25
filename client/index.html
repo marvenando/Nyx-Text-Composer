@@ -69,6 +69,15 @@
       </div>
     </header>
 
+    <!-- Automatic Update Banner (shown on startup when a newer version is found) -->
+    <div class="update-banner hidden" id="updateBanner" role="region" aria-label="Update available">
+      <span class="update-banner-text" id="updateBannerText">Update available</span>
+      <div class="update-banner-actions">
+        <button type="button" class="update-now-btn" id="btnInstallUpdate">Install update</button>
+        <button type="button" class="update-dismiss-btn" id="btnDismissUpdate" aria-label="Dismiss update notice" title="Dismiss">&times;</button>
+      </div>
+    </div>
+
     <!-- Search Bar -->
     <div class="search-row">
       <label class="sr-only" for="searchInput">Search text presets</label>

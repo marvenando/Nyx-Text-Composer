@@ -1116,7 +1116,8 @@ window.TEXT_COMPOSER_PRESETS = [
       loopMode: "vhs",
       loopSpeed: 6,
       loopIntensity: 100,
-      props: { position: [10, 3], skew: 6, blur: [4, 0] }
+      fxEffect: "vhsTracking",
+      props: { position: [14, 4], skew: 8, blur: [5, 0] }
     }
   },
   {
@@ -1133,6 +1134,7 @@ window.TEXT_COMPOSER_PRESETS = [
     ae: {
       ease: "flicker",
       rgbHit: true,
+      fxEffect: "vhsBleed",
       props: { blur: [22, 4], opacity: 0 }
     }
   }

@@ -38,7 +38,12 @@
   var elBtnAutoPlay = document.getElementById("btnAutoPlay");
   var elBtnUpdate = document.getElementById("btnUpdate");
   var elUpdateDot = document.getElementById("updateDot");
+  var elUpdateBanner = document.getElementById("updateBanner");
+  var elUpdateBannerText = document.getElementById("updateBannerText");
+  var elBtnInstallUpdate = document.getElementById("btnInstallUpdate");
+  var elBtnDismissUpdate = document.getElementById("btnDismissUpdate");
   var elBtnClearLayer = document.getElementById("btnClearLayer");
+  var pendingRemoteVersion = "";
   var elBtnResetFilters = document.getElementById("btnResetFilters");
   var elBtnToggleSettings = document.getElementById("btnToggleSettings");
   var elDrawerBody = document.getElementById("drawerBody");
@@ -1033,8 +1038,16 @@
         var hasNewer = compareSemver(remoteVer, config.version) > 0;
 
         if (hasNewer) {
+          pendingRemoteVersion = remoteVer;
           elUpdateDot.classList.remove("hidden");
           elBtnUpdate.title = "Update available: v" + remoteVer + " (click to install)";
+          if (elUpdateBanner && elUpdateBannerText) {
+            elUpdateBannerText.textContent = "Update v" + remoteVer + " available";
+            elUpdateBanner.classList.remove("hidden");
+          }
+          if (silent) {
+            setStatus("Update v" + remoteVer + " is available. Click Install update to apply.", "ok");
+          }
         }
 
         if (silent) return;
@@ -1123,6 +1136,24 @@
     elBtnUpdate.addEventListener("click", function (e) {
       if (elOptGithubToken) saveToken(elOptGithubToken.value);
       checkForUpdates(false, !!e.shiftKey);
+    });
+  }
+
+  if (elBtnInstallUpdate) {
+    elBtnInstallUpdate.addEventListener("click", function () {
+      if (elOptGithubToken) saveToken(elOptGithubToken.value);
+      if (pendingRemoteVersion) {
+        elBtnUpdate.classList.add("spinning");
+        performUpdate(pendingRemoteVersion);
+      } else {
+        checkForUpdates(false, false);
+      }
+    });
+  }
+
+  if (elBtnDismissUpdate) {
+    elBtnDismissUpdate.addEventListener("click", function () {
+      if (elUpdateBanner) elUpdateBanner.classList.add("hidden");
     });
   }
 

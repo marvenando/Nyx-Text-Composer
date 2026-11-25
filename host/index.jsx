@@ -403,41 +403,86 @@ function tc_applyLayerEffect(layer, fxType) {
             try { ds.property("ADBE Drop Shadow-0003").setValue(135); } catch (e) {} // Direction
             try { ds.property("ADBE Drop Shadow-0004").setValue(8); } catch (e) {}   // Distance
             try { ds.property("ADBE Drop Shadow-0005").setValue(0); } catch (e) {}   // Softness
+        } else if (fxType === "vhsTracking" || fxType === "vhsBleed") {
+            // 1. Horizontal analog tape tracking distortion (Wave Warp)
+            if (effects.canAddProperty("ADBE Wave Warp")) {
+                var ww = effects.addProperty("ADBE Wave Warp");
+                ww.name = TC_PREFIX_EFX + " VHS Warp";
+                var wwType = ww.property("Wave Type") || ww.property(1);
+                var wwHeight = ww.property("Wave Height") || ww.property(2);
+                var wwWidth = ww.property("Wave Width") || ww.property(3);
+                var wwDir = ww.property("Direction") || ww.property(4);
+                var wwSpeed = ww.property("Wave Speed") || ww.property(5);
+                try { if (wwType) wwType.setValue(2); } catch (e) {} // 2 = Square (tape tear)
+                try { if (wwHeight) wwHeight.setValue(fxType === "vhsTracking" ? 6 : 3); } catch (e) {}
+                try { if (wwWidth) wwWidth.setValue(140); } catch (e) {}
+                try { if (wwDir) wwDir.setValue(0); } catch (e) {}
+                try { if (wwSpeed) wwSpeed.setValue(fxType === "vhsTracking" ? 2.4 : 1.2); } catch (e) {}
+            }
+            // 2. Subtle CRT/VHS horizontal scanlines
+            if (effects.canAddProperty("ADBE Venetian Blinds")) {
+                var vhsScan = effects.addProperty("ADBE Venetian Blinds");
+                vhsScan.name = TC_PREFIX_EFX + " VHS Scanlines";
+                try { vhsScan.property("ADBE Venetian Blinds-0001").setValue(16); } catch (e) {}
+                try { vhsScan.property("ADBE Venetian Blinds-0002").setValue(90); } catch (e) {}
+                try { vhsScan.property("ADBE Venetian Blinds-0003").setValue(4); } catch (e) {}
+            }
+            // 3. Continuous retro red/blue chromatic bleed
+            var rgbMatch = tc_findRgbMatchName(effects);
+            if (rgbMatch) {
+                var vhsRgb = effects.addProperty(rgbMatch);
+                vhsRgb.name = TC_PREFIX_EFX + " VHS Color Bleed";
+                var rProp = vhsRgb.property("Aberration (Red)") || vhsRgb.property(1);
+                var bProp = vhsRgb.property("Aberration (Blue)") || vhsRgb.property(3);
+                var bleedVal = fxType === "vhsTracking" ? 8 : 6;
+                try { if (rProp) rProp.setValue(bleedVal); } catch (e) {}
+                try { if (bProp) bProp.setValue(-bleedVal); } catch (e) {}
+            }
         }
     } catch (e) {}
+}
+
+function tc_findRgbMatchName(effects) {
+    if (effects.canAddProperty("ADBE VR Chromatic Aberrations")) return "ADBE VR Chromatic Aberrations";
+    if (effects.canAddProperty("ADBE VR Chromatic Aberration")) return "ADBE VR Chromatic Aberration";
+    return null;
 }
 
 // ==================== CHROMATIC RGB HIT ====================
 function tc_applyRgbHit(layer, direction) {
     tc_removeByPrefix(layer, TC_PREFIX_RGB);
     var effects = layer.property("ADBE Effect Parade");
-    if (!effects.canAddProperty("ADBE VR Chromatic Aberration")) return;
+    var rgbMatch = tc_findRgbMatchName(effects);
+    if (!rgbMatch) return;
 
-    var rgb = effects.addProperty("ADBE VR Chromatic Aberration");
+    var rgb = effects.addProperty(rgbMatch);
     rgb.name = TC_PREFIX_RGB + " Chromatic Hit";
 
     var useIn = (direction === "in" || direction === "both");
     var useOut = (direction === "out" || direction === "both");
 
-    var lines = ["var amt = 0;"];
+    var baseLines = ["var amt = 0;"];
     if (useIn) {
-        lines.push('var dIn = 0.5; try { dIn = Math.max(0.05, effect("' + TC_PREFIX_IN + ' Duration (s)")("Slider")); } catch(e) {}');
-        lines.push('try { dIn = Math.max(0.05, marker.key("In").time - inPoint); } catch(e) {}');
-        lines.push("var tIn = clamp((time - inPoint) / (dIn * 0.7), 0, 1);");
-        lines.push("if (tIn > 0 && tIn < 1) amt = Math.max(amt, Math.sin(tIn * Math.PI) * 14);");
+        baseLines.push('var dIn = 0.5; try { dIn = Math.max(0.05, effect("' + TC_PREFIX_IN + ' Duration (s)")("Slider")); } catch(e) {}');
+        baseLines.push('try { dIn = Math.max(0.05, marker.key("In").time - inPoint); } catch(e) {}');
+        baseLines.push("var tIn = clamp((time - inPoint) / (dIn * 0.7), 0, 1);");
+        baseLines.push("if (tIn > 0 && tIn < 1) amt = Math.max(amt, Math.sin(tIn * Math.PI) * 18);");
     }
     if (useOut) {
-        lines.push('var dOut = 0.5; try { dOut = Math.max(0.05, effect("' + TC_PREFIX_OUT + ' Duration (s)")("Slider")); } catch(e) {}');
-        lines.push('try { dOut = Math.max(0.05, outPoint - marker.key("Out").time); } catch(e) {}');
-        lines.push("var tOut = clamp((time - (outPoint - dOut)) / (dOut * 0.7), 0, 1);");
-        lines.push("if (tOut > 0 && tOut < 1) amt = Math.max(amt, Math.sin(tOut * Math.PI) * 14);");
+        baseLines.push('var dOut = 0.5; try { dOut = Math.max(0.05, effect("' + TC_PREFIX_OUT + ' Duration (s)")("Slider")); } catch(e) {}');
+        baseLines.push('try { dOut = Math.max(0.05, outPoint - marker.key("Out").time); } catch(e) {}');
+        baseLines.push("var tOut = clamp((time - (outPoint - dOut)) / (dOut * 0.7), 0, 1);");
+        baseLines.push("if (tOut > 0 && tOut < 1) amt = Math.max(amt, Math.sin(tOut * Math.PI) * 18);");
     }
-    lines.push("amt;");
-    var expr = lines.join("\n");
+
+    var exprRed = baseLines.concat(["amt;"]).join("\n");
+    var exprBlue = baseLines.concat(["-amt;"]).join("\n");
 
     try {
-        rgb.property("ADBE VR Chromatic Aberration-0001").expression = expr; // Aberration Red
-        rgb.property("ADBE VR Chromatic Aberration-0003").expression = "-(" + expr.replace(/amt;\s*$/, "") + "amt);"; // Aberration Blue
+        var rProp = rgb.property("Aberration (Red)") || rgb.property(1);
+        var bProp = rgb.property("Aberration (Blue)") || rgb.property(3);
+        if (rProp) rProp.expression = exprRed;
+        if (bProp) bProp.expression = exprBlue;
     } catch (e) {}
 }
 
@@ -885,6 +930,9 @@ function TextComposer_applyPreset(jsonStr) {
 
             if (cfg.direction === "fx") {
                 tc_applyLoopFX(layer, cfg);
+                if (ae.fxEffect) {
+                    tc_applyLayerEffect(layer, ae.fxEffect);
+                }
             } else if (cfg.direction === "counter") {
                 tc_applyCounter(layer, cfg);
             } else if (cfg.direction === "terminal") {

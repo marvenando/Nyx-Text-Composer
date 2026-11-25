@@ -286,6 +286,66 @@ input:disabled {
   transform: translateY(1px);
 }
 
+/* Startup Update Banner */
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--brand-plum);
+  color: var(--text-on-brand);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+}
+
+.update-banner-text {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.update-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.update-now-btn {
+  height: 22px;
+  padding: 0 9px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.update-now-btn:hover {
+  filter: brightness(1.06);
+}
+
+.update-dismiss-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-xs);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-on-brand);
+  font-size: 15px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.update-dismiss-btn:hover {
+  border-color: var(--text-on-brand);
+}
+
 /* Search Bar */
 .search-row {
   padding: 8px 12px 6px;
