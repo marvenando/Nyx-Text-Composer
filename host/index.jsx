@@ -250,14 +250,23 @@ function tc_ensureBgShape(comp, layer, shapeType, bgColor, direction) {
     grp.name = "Auto Shape";
 
     var grpContents = grp.property("ADBE Vectors Group");
-    var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
+    // Add all children first (calling addProperty invalidates prior sibling references in AE)
+    grpContents.addProperty("ADBE Vector Shape - Rect");
     if (shapeType === "brackets") {
-        var stroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
+        grpContents.addProperty("ADBE Vector Graphic - Stroke");
+    } else {
+        grpContents.addProperty("ADBE Vector Graphic - Fill");
+    }
+
+    // Re-fetch references cleanly after all addProperty calls
+    var rect = grpContents.property("ADBE Vector Shape - Rect");
+    if (shapeType === "brackets") {
+        var stroke = grpContents.property("ADBE Vector Graphic - Stroke");
         stroke.property("ADBE Vector Stroke Color").expression = 'effect("' + TC_PREFIX_BG + ' Color")("Color")';
         stroke.property("ADBE Vector Stroke Width").setValue(4);
         rect.property("ADBE Vector Rect Roundness").setValue(0);
     } else {
-        var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
+        var fill = grpContents.property("ADBE Vector Graphic - Fill");
         fill.property("ADBE Vector Fill Color").expression = 'effect("' + TC_PREFIX_BG + ' Color")("Color")';
         if (shapeType === "box") {
             rect.property("ADBE Vector Rect Roundness").setValue(14);
