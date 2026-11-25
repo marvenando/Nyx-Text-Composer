@@ -221,7 +221,24 @@ function tc_ensureBgShape(comp, layer, shapeType, bgColor, direction) {
         shape.moveAfter(layer);
     }
     shape.parent = layer;
-    shape.property("ADBE Transform Group").property("ADBE Position").setValue([0, 0]);
+
+    // Reset child transform cleanly so scaled, rotated, or 3D text layers stay pixel-aligned
+    var tr = shape.property("ADBE Transform Group");
+    if (layer.threeDLayer) {
+        shape.threeDLayer = true;
+        try { tr.property("ADBE Anchor Point").setValue([0, 0, 0]); } catch (e) {}
+        try { tr.property("ADBE Position").setValue([0, 0, shapeType === "wipeBlock" ? -1 : 1]); } catch (e) {}
+        try { tr.property("ADBE Scale").setValue([100, 100, 100]); } catch (e) {}
+        try { tr.property("ADBE Orientation").setValue([0, 0, 0]); } catch (e) {}
+        try { tr.property("ADBE Rotate X").setValue(0); } catch (e) {}
+        try { tr.property("ADBE Rotate Y").setValue(0); } catch (e) {}
+        try { tr.property("ADBE Rotate Z").setValue(0); } catch (e) {}
+    } else {
+        try { tr.property("ADBE Anchor Point").setValue([0, 0]); } catch (e) {}
+        try { tr.property("ADBE Position").setValue([0, 0]); } catch (e) {}
+        try { tr.property("ADBE Scale").setValue([100, 100]); } catch (e) {}
+        try { tr.property("ADBE Rotate Z").setValue(0); } catch (e) {}
+    }
 
     var effects = shape.property("ADBE Effect Parade");
     tc_addColor(effects, TC_PREFIX_BG + " Color", bgColor || [0.18, 0.55, 1.0, 1]);
@@ -256,35 +273,79 @@ function tc_ensureBgShape(comp, layer, shapeType, bgColor, direction) {
     var rectSize = rect.property("ADBE Vector Rect Size");
     var rectPos = rect.property("ADBE Vector Rect Position");
     var grpTransform = grp.property("ADBE Vector Transform Group");
-    var grpAnchor = grpTransform.property("ADBE Vector Anchor");
     var grpPos = grpTransform.property("ADBE Vector Position");
     var grpScale = grpTransform.property("ADBE Vector Scale");
 
-    if (shapeType === "underline") {
-        rectSize.expression = [
+    var useIn = (direction === "in" || direction === "both");
+    var useOut = (direction === "out" || direction === "both");
+
+    // Shared progress expression snippet (s in [0..1], synced to parent In / Out markers)
+    var progLines = [
+        "var p = thisLayer.parent;",
+        "var midT = p.inPoint + Math.max(0.01, (p.outPoint - p.inPoint) * 0.5);",
+        "var r = p.sourceRectAtTime(midT, false);",
+        'var padX = effect("' + TC_PREFIX_BG + ' Pad X")("Slider");',
+        'var padY = effect("' + TC_PREFIX_BG + ' Pad Y")("Slider");',
+        "var s = 1;"
+    ];
+    if (useIn) {
+        progLines.push('var dIn = 0.6; try { dIn = Math.max(0.05, p.effect("' + TC_PREFIX_IN + ' Duration (s)")("Slider")); } catch(e) {}');
+        progLines.push('try { dIn = Math.max(0.05, p.marker.key("In").time - p.inPoint); } catch(e) {}');
+        progLines.push("var tIn = clamp((time - p.inPoint) / (dIn * 0.8), 0, 1);");
+        progLines.push("var eIn = (tIn >= 1) ? 1 : (tIn <= 0 ? 0 : 1 - Math.pow(2, -10 * tIn));");
+        progLines.push("s *= eIn;");
+    }
+    if (useOut) {
+        progLines.push('var dOut = 0.6; try { dOut = Math.max(0.05, p.effect("' + TC_PREFIX_OUT + ' Duration (s)")("Slider")); } catch(e) {}');
+        progLines.push('try { dOut = Math.max(0.05, p.outPoint - p.marker.key("Out").time); } catch(e) {}');
+        progLines.push("var tOut = clamp((time - (p.outPoint - dOut)) / (dOut * 0.8), 0, 1);");
+        progLines.push("var eOut = 1 - ((tOut >= 1) ? 1 : (tOut <= 0 ? 0 : 1 - Math.pow(2, -10 * tOut)));");
+        progLines.push("s *= eOut;");
+    }
+
+    if (shapeType === "highlighter" || shapeType === "underline") {
+        // Direct Rect Size + Rect Position wipe: zero corner distortion, pixel-aligned left-to-right swipe
+        var fullW = "(r.width + padX * 2)";
+        var hExpr = shapeType === "underline" ? "Math.max(2, padY)" : "(r.height + padY * 2)";
+        var yExpr = shapeType === "underline" ? "(r.top + r.height + 12)" : "(r.top + r.height * 0.5)";
+
+        rectSize.expression = progLines.concat([
+            "var w = " + fullW + " * s;",
+            "[Math.max(0, w), " + hExpr + "];"
+        ]).join("\n");
+
+        rectPos.expression = progLines.concat([
+            "var w = " + fullW + " * s;",
+            "[r.left - padX + w * 0.5, " + yExpr + "];"
+        ]).join("\n");
+
+        grpPos.setValue([0, 0]);
+        grpScale.setValue([100, 100]);
+    } else if (shapeType === "wipeBlock") {
+        // Swiss Block Wipe: expands L->R on first half, retracts L->R on second half
+        var wbHead = [
             "var p = thisLayer.parent;",
             "var midT = p.inPoint + Math.max(0.01, (p.outPoint - p.inPoint) * 0.5);",
             "var r = p.sourceRectAtTime(midT, false);",
             'var padX = effect("' + TC_PREFIX_BG + ' Pad X")("Slider");',
-            'var barH = Math.max(2, effect("' + TC_PREFIX_BG + ' Pad Y")("Slider"));',
-            "[r.width + padX * 2, barH];"
-        ].join("\n");
-        rectPos.setValue([0, 0]);
-        grpAnchor.expression = [
-            "var p = thisLayer.parent;",
-            "var midT = p.inPoint + Math.max(0.01, (p.outPoint - p.inPoint) * 0.5);",
-            "var r = p.sourceRectAtTime(midT, false);",
-            'var padX = effect("' + TC_PREFIX_BG + ' Pad X")("Slider");',
-            "[-(r.width + padX * 2) * 0.5, 0];"
-        ].join("\n");
-        grpPos.expression = [
-            "var p = thisLayer.parent;",
-            "var midT = p.inPoint + Math.max(0.01, (p.outPoint - p.inPoint) * 0.5);",
-            "var r = p.sourceRectAtTime(midT, false);",
-            'var padX = effect("' + TC_PREFIX_BG + ' Pad X")("Slider");',
-            "[r.left - padX, r.top + r.height + 12];"
-        ].join("\n");
+            'var padY = effect("' + TC_PREFIX_BG + ' Pad Y")("Slider");',
+            'var dIn = 0.8; try { dIn = Math.max(0.1, p.effect("' + TC_PREFIX_IN + ' Duration (s)")("Slider")); } catch(e) {}',
+            'try { dIn = Math.max(0.1, p.marker.key("In").time - p.inPoint); } catch(e) {}',
+            "var t = clamp((time - p.inPoint) / dIn, 0, 1);",
+            "var fullW = r.width + padX * 2;",
+            "var leftX = r.left - padX;",
+            "var easeA = t < 0.5 ? (1 - Math.pow(2, -10 * (t * 2))) : 1;",
+            "var easeB = t > 0.5 ? (1 - Math.pow(2, -10 * ((t - 0.5) * 2))) : 0;",
+            "var x0 = leftX + fullW * easeB;",
+            "var x1 = leftX + fullW * easeA;",
+            "var w = (t <= 0 || t >= 1) ? 0 : Math.max(0, x1 - x0);"
+        ];
+        rectSize.expression = wbHead.concat(["[w, r.height + padY * 2];"]).join("\n");
+        rectPos.expression = wbHead.concat(["[x0 + w * 0.5, r.top + r.height * 0.5];"]).join("\n");
+        grpPos.setValue([0, 0]);
+        grpScale.setValue([100, 100]);
     } else {
+        // Auto-Boxed Title & HUD Corner Brackets: centered scale-in
         rectSize.expression = [
             "var p = thisLayer.parent;",
             "var midT = p.inPoint + Math.max(0.01, (p.outPoint - p.inPoint) * 0.5);",
@@ -294,71 +355,15 @@ function tc_ensureBgShape(comp, layer, shapeType, bgColor, direction) {
             "[r.width + padX * 2, r.height + padY * 2];"
         ].join("\n");
         rectPos.setValue([0, 0]);
-
-        if (shapeType === "highlighter") {
-            grpAnchor.expression = [
-                "var p = thisLayer.parent;",
-                "var midT = p.inPoint + Math.max(0.01, (p.outPoint - p.inPoint) * 0.5);",
-                "var r = p.sourceRectAtTime(midT, false);",
-                'var padX = effect("' + TC_PREFIX_BG + ' Pad X")("Slider");',
-                "[-(r.width + padX * 2) * 0.5, 0];"
-            ].join("\n");
-            grpPos.expression = [
-                "var p = thisLayer.parent;",
-                "var midT = p.inPoint + Math.max(0.01, (p.outPoint - p.inPoint) * 0.5);",
-                "var r = p.sourceRectAtTime(midT, false);",
-                'var padX = effect("' + TC_PREFIX_BG + ' Pad X")("Slider");',
-                "[r.left - padX, r.top + r.height * 0.5];"
-            ].join("\n");
-        } else {
-            grpPos.expression = [
-                "var p = thisLayer.parent;",
-                "var midT = p.inPoint + Math.max(0.01, (p.outPoint - p.inPoint) * 0.5);",
-                "var r = p.sourceRectAtTime(midT, false);",
-                "[r.left + r.width * 0.5, r.top + r.height * 0.5];"
-            ].join("\n");
-        }
-    }
-
-    // Animate scale cleanly in sync with parent IN/OUT duration
-    var useIn = (direction === "in" || direction === "both");
-    var useOut = (direction === "out" || direction === "both");
-    var scaleLines = [
-        "var p = thisLayer.parent;",
-        "var s = 1;"
-    ];
-    if (useIn) {
-        scaleLines.push('var dIn = 0.6; try { dIn = Math.max(0.05, p.effect("' + TC_PREFIX_IN + ' Duration (s)")("Slider")); } catch(e) {}');
-        scaleLines.push('try { dIn = Math.max(0.05, p.marker.key("In").time - p.inPoint); } catch(e) {}');
-        scaleLines.push("var tIn = clamp((time - p.inPoint) / (dIn * 0.75), 0, 1);");
-        scaleLines.push("var eIn = (tIn >= 1) ? 1 : (tIn <= 0 ? 0 : 1 - Math.pow(2, -10 * tIn));");
-        scaleLines.push("s *= eIn;");
-    }
-    if (useOut) {
-        scaleLines.push('var dOut = 0.6; try { dOut = Math.max(0.05, p.effect("' + TC_PREFIX_OUT + ' Duration (s)")("Slider")); } catch(e) {}');
-        scaleLines.push('try { dOut = Math.max(0.05, p.outPoint - p.marker.key("Out").time); } catch(e) {}');
-        scaleLines.push("var tOut = clamp((time - (p.outPoint - dOut)) / (dOut * 0.75), 0, 1);");
-        scaleLines.push("var eOut = 1 - ((tOut >= 1) ? 1 : (tOut <= 0 ? 0 : 1 - Math.pow(2, -10 * tOut)));");
-        scaleLines.push("s *= eOut;");
-    }
-    if (shapeType === "wipeBlock") {
-        // Swiss Block Wipe: expands L->R on first half, retracts L->R on second half
-        var wbLines = [
+        grpPos.expression = [
             "var p = thisLayer.parent;",
-            'var dIn = 0.8; try { dIn = Math.max(0.1, p.effect("' + TC_PREFIX_IN + ' Duration (s)")("Slider")); } catch(e) {}',
-            'try { dIn = Math.max(0.1, p.marker.key("In").time - p.inPoint); } catch(e) {}',
-            "var t = clamp((time - p.inPoint) / dIn, 0, 1);",
-            "var sx = t < 0.5 ? (1 - Math.pow(2, -10 * (t * 2))) : (1 - (1 - Math.pow(2, -10 * ((t - 0.5) * 2))));",
-            "if (t <= 0 || t >= 1) sx = 0;",
-            "[sx * 100, 100];"
-        ];
-        grpScale.expression = wbLines.join("\n");
-    } else if (shapeType === "box" || shapeType === "brackets") {
-        scaleLines.push("[s * 100, (0.65 + 0.35 * s) * 100];");
-        grpScale.expression = scaleLines.join("\n");
-    } else {
-        scaleLines.push("[s * 100, 100];");
-        grpScale.expression = scaleLines.join("\n");
+            "var midT = p.inPoint + Math.max(0.01, (p.outPoint - p.inPoint) * 0.5);",
+            "var r = p.sourceRectAtTime(midT, false);",
+            "[r.left + r.width * 0.5, r.top + r.height * 0.5];"
+        ].join("\n");
+        grpScale.expression = progLines.concat([
+            "[s * 100, (0.65 + 0.35 * s) * 100];"
+        ]).join("\n");
     }
 }
 
