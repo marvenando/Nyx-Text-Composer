@@ -101,7 +101,29 @@
       </div>
     </div>
 
-    <!-- Category Tabs -->
+    <!-- Mode Switcher: Transitions vs Loops & FX -->
+    <div class="mode-switcher" role="tablist" aria-label="Preset type">
+      <button
+        type="button"
+        class="mode-tab active"
+        id="tabTransitions"
+        role="tab"
+        aria-selected="true"
+      >
+        Transitions <span class="mode-tab-count" id="countTransitions">58</span>
+      </button>
+      <button
+        type="button"
+        class="mode-tab"
+        id="tabLoops"
+        role="tab"
+        aria-selected="false"
+      >
+        Loops &amp; FX <span class="mode-tab-count" id="countLoops">6</span>
+      </button>
+    </div>
+
+    <!-- Category Tabs (shown for Transitions) -->
     <nav class="categories" id="categoryBar" aria-label="Preset categories"></nav>
 
     <!-- Preset Grid -->

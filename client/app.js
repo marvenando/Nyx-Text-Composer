@@ -10,6 +10,7 @@
   var STORAGE_TOKEN = "tc_github_token_v1";
   var STORAGE_THEME = "nyx_theme_v1";
   var state = {
+    viewMode: "transitions", // "transitions" | "loops"
     category: "all",
     search: "",
     favoritesOnly: false,
@@ -29,6 +30,10 @@
 
   // DOM refs
   var elCount = document.getElementById("presetCount");
+  var elTabTransitions = document.getElementById("tabTransitions");
+  var elTabLoops = document.getElementById("tabLoops");
+  var elCountTransitions = document.getElementById("countTransitions");
+  var elCountLoops = document.getElementById("countLoops");
   var elCategoryBar = document.getElementById("categoryBar");
   var elGrid = document.getElementById("presetGrid");
   var elEmpty = document.getElementById("emptyState");
@@ -557,9 +562,30 @@
   }
 
   // ==================== RENDER UI ====================
+  function updateModeTabs() {
+    var transCount = presets.filter(function (p) { return !p.isLoop; }).length;
+    var loopCount = presets.filter(function (p) { return !!p.isLoop; }).length;
+    if (elCountTransitions) elCountTransitions.textContent = String(transCount);
+    if (elCountLoops) elCountLoops.textContent = String(loopCount);
+
+    var isLoops = state.viewMode === "loops";
+    if (elTabTransitions) {
+      elTabTransitions.classList.toggle("active", !isLoops);
+      elTabTransitions.setAttribute("aria-selected", !isLoops ? "true" : "false");
+    }
+    if (elTabLoops) {
+      elTabLoops.classList.toggle("active", isLoops);
+      elTabLoops.setAttribute("aria-selected", isLoops ? "true" : "false");
+    }
+    elCategoryBar.classList.toggle("hidden", isLoops);
+  }
+
   function renderCategories() {
     elCategoryBar.innerHTML = "";
+    if (state.viewMode === "loops") return;
+
     categories.forEach(function (cat) {
+      if (cat.id === "loops") return;
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "cat-tab" + (state.category === cat.id ? " active" : "");
@@ -576,9 +602,12 @@
 
   function getFilteredPresets() {
     var q = state.search.trim().toLowerCase();
+    var wantLoops = state.viewMode === "loops";
     return presets.filter(function (p) {
+      if (wantLoops && !p.isLoop) return false;
+      if (!wantLoops && p.isLoop) return false;
       if (state.favoritesOnly && state.favorites.indexOf(p.id) === -1) return false;
-      if (state.category !== "all" && p.category !== state.category) return false;
+      if (!wantLoops && state.category !== "all" && p.category !== state.category) return false;
       if (q) {
         var hay = (p.name + " " + p.category + " " + (p.tags || []).join(" ")).toLowerCase();
         if (hay.indexOf(q) === -1) return false;
@@ -1183,8 +1212,27 @@
     });
   }
 
+  if (elTabTransitions) {
+    elTabTransitions.addEventListener("click", function () {
+      state.viewMode = "transitions";
+      updateModeTabs();
+      renderCategories();
+      renderGrid();
+    });
+  }
+
+  if (elTabLoops) {
+    elTabLoops.addEventListener("click", function () {
+      state.viewMode = "loops";
+      updateModeTabs();
+      renderCategories();
+      renderGrid();
+    });
+  }
+
   // Init
   applyTheme(loadTheme());
+  updateModeTabs();
   renderCategories();
   renderGrid();
   updateSettingsSummary();
