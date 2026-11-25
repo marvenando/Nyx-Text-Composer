@@ -7,7 +7,7 @@
  *  3. Whenever you push changes, bump "version" here AND in package.json.
  */
 window.TEXT_COMPOSER_CONFIG = {
-  version: "1.3.3",
+  version: "1.3.4",
   githubRepo: "marvenando/Nyx-Text-Composer",
   branch: "main",
   updateFiles: [

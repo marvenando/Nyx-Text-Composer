@@ -427,62 +427,70 @@ function tc_applyLayerEffect(layer, fxType) {
                 try { vhsScan.property("ADBE Venetian Blinds-0002").setValue(90); } catch (e) {}
                 try { vhsScan.property("ADBE Venetian Blinds-0003").setValue(4); } catch (e) {}
             }
-            // 3. Continuous retro red/blue chromatic bleed
-            var rgbMatch = tc_findRgbMatchName(effects);
-            if (rgbMatch) {
-                var vhsRgb = effects.addProperty(rgbMatch);
-                vhsRgb.name = TC_PREFIX_EFX + " VHS Color Bleed";
-                var rProp = vhsRgb.property("Aberration (Red)") || vhsRgb.property(1);
-                var bProp = vhsRgb.property("Aberration (Blue)") || vhsRgb.property(3);
-                var bleedVal = fxType === "vhsTracking" ? 8 : 6;
-                try { if (rProp) rProp.setValue(bleedVal); } catch (e) {}
-                try { if (bProp) bProp.setValue(-bleedVal); } catch (e) {}
+            // 3. Continuous retro red/cyan VHS color bleed (works at comp center & edges on all AE GPUs)
+            if (effects.canAddProperty("ADBE Drop Shadow")) {
+                var bleedDist = fxType === "vhsTracking" ? 6 : 5;
+                var vhsRed = effects.addProperty("ADBE Drop Shadow");
+                vhsRed.name = TC_PREFIX_EFX + " VHS Red Bleed";
+                try { (vhsRed.property("Shadow Color") || vhsRed.property(1)).setValue([1.0, 0.14, 0.34, 1]); } catch (e) {}
+                try { (vhsRed.property("Opacity") || vhsRed.property(2)).setValue(185); } catch (e) {}
+                try { (vhsRed.property("Direction") || vhsRed.property(3)).setValue(270); } catch (e) {}
+                try { (vhsRed.property("Distance") || vhsRed.property(4)).setValue(bleedDist); } catch (e) {}
+                try { (vhsRed.property("Softness") || vhsRed.property(5)).setValue(4); } catch (e) {}
+
+                var vhsCyan = effects.addProperty("ADBE Drop Shadow");
+                vhsCyan.name = TC_PREFIX_EFX + " VHS Cyan Bleed";
+                try { (vhsCyan.property("Shadow Color") || vhsCyan.property(1)).setValue([0.04, 0.88, 1.0, 1]); } catch (e) {}
+                try { (vhsCyan.property("Opacity") || vhsCyan.property(2)).setValue(185); } catch (e) {}
+                try { (vhsCyan.property("Direction") || vhsCyan.property(3)).setValue(90); } catch (e) {}
+                try { (vhsCyan.property("Distance") || vhsCyan.property(4)).setValue(bleedDist); } catch (e) {}
+                try { (vhsCyan.property("Softness") || vhsCyan.property(5)).setValue(4); } catch (e) {}
             }
         }
     } catch (e) {}
-}
-
-function tc_findRgbMatchName(effects) {
-    if (effects.canAddProperty("ADBE VR Chromatic Aberrations")) return "ADBE VR Chromatic Aberrations";
-    if (effects.canAddProperty("ADBE VR Chromatic Aberration")) return "ADBE VR Chromatic Aberration";
-    return null;
 }
 
 // ==================== CHROMATIC RGB HIT ====================
 function tc_applyRgbHit(layer, direction) {
     tc_removeByPrefix(layer, TC_PREFIX_RGB);
     var effects = layer.property("ADBE Effect Parade");
-    var rgbMatch = tc_findRgbMatchName(effects);
-    if (!rgbMatch) return;
-
-    var rgb = effects.addProperty(rgbMatch);
-    rgb.name = TC_PREFIX_RGB + " Chromatic Hit";
+    if (!effects.canAddProperty("ADBE Drop Shadow")) return;
 
     var useIn = (direction === "in" || direction === "both");
     var useOut = (direction === "out" || direction === "both");
 
-    var baseLines = ["var amt = 0;"];
+    var distLines = ["var amt = 0;"];
     if (useIn) {
-        baseLines.push('var dIn = 0.5; try { dIn = Math.max(0.05, effect("' + TC_PREFIX_IN + ' Duration (s)")("Slider")); } catch(e) {}');
-        baseLines.push('try { dIn = Math.max(0.05, marker.key("In").time - inPoint); } catch(e) {}');
-        baseLines.push("var tIn = clamp((time - inPoint) / (dIn * 0.7), 0, 1);");
-        baseLines.push("if (tIn > 0 && tIn < 1) amt = Math.max(amt, Math.sin(tIn * Math.PI) * 18);");
+        distLines.push('var dIn = 0.55; try { dIn = Math.max(0.05, effect("' + TC_PREFIX_IN + ' Duration (s)")("Slider")); } catch(e) {}');
+        distLines.push('try { dIn = Math.max(0.05, marker.key("In").time - inPoint); } catch(e) {}');
+        distLines.push("var tIn = clamp((time - inPoint) / (dIn * 0.8), 0, 1);");
+        distLines.push("if (tIn > 0 && tIn < 1) amt = Math.max(amt, Math.sin(tIn * Math.PI) * 14);");
     }
     if (useOut) {
-        baseLines.push('var dOut = 0.5; try { dOut = Math.max(0.05, effect("' + TC_PREFIX_OUT + ' Duration (s)")("Slider")); } catch(e) {}');
-        baseLines.push('try { dOut = Math.max(0.05, outPoint - marker.key("Out").time); } catch(e) {}');
-        baseLines.push("var tOut = clamp((time - (outPoint - dOut)) / (dOut * 0.7), 0, 1);");
-        baseLines.push("if (tOut > 0 && tOut < 1) amt = Math.max(amt, Math.sin(tOut * Math.PI) * 18);");
+        distLines.push('var dOut = 0.55; try { dOut = Math.max(0.05, effect("' + TC_PREFIX_OUT + ' Duration (s)")("Slider")); } catch(e) {}');
+        distLines.push('try { dOut = Math.max(0.05, outPoint - marker.key("Out").time); } catch(e) {}');
+        distLines.push("var tOut = clamp((time - (outPoint - dOut)) / (dOut * 0.8), 0, 1);");
+        distLines.push("if (tOut > 0 && tOut < 1) amt = Math.max(amt, Math.sin(tOut * Math.PI) * 14);");
     }
-
-    var exprRed = baseLines.concat(["amt;"]).join("\n");
-    var exprBlue = baseLines.concat(["-amt;"]).join("\n");
+    var distExpr = distLines.concat(["amt;"]).join("\n");
+    var opacExpr = distLines.concat(["amt > 0.2 ? 210 : 0;"]).join("\n");
 
     try {
-        var rProp = rgb.property("Aberration (Red)") || rgb.property(1);
-        var bProp = rgb.property("Aberration (Blue)") || rgb.property(3);
-        if (rProp) rProp.expression = exprRed;
-        if (bProp) bProp.expression = exprBlue;
+        var rgbRed = effects.addProperty("ADBE Drop Shadow");
+        rgbRed.name = TC_PREFIX_RGB + " Red Split";
+        (rgbRed.property("Shadow Color") || rgbRed.property(1)).setValue([1.0, 0.12, 0.36, 1]);
+        (rgbRed.property("Opacity") || rgbRed.property(2)).expression = opacExpr;
+        (rgbRed.property("Direction") || rgbRed.property(3)).setValue(270);
+        (rgbRed.property("Distance") || rgbRed.property(4)).expression = distExpr;
+        (rgbRed.property("Softness") || rgbRed.property(5)).setValue(2);
+
+        var rgbCyan = effects.addProperty("ADBE Drop Shadow");
+        rgbCyan.name = TC_PREFIX_RGB + " Cyan Split";
+        (rgbCyan.property("Shadow Color") || rgbCyan.property(1)).setValue([0.02, 0.88, 1.0, 1]);
+        (rgbCyan.property("Opacity") || rgbCyan.property(2)).expression = opacExpr;
+        (rgbCyan.property("Direction") || rgbCyan.property(3)).setValue(90);
+        (rgbCyan.property("Distance") || rgbCyan.property(4)).expression = distExpr;
+        (rgbCyan.property("Softness") || rgbCyan.property(5)).setValue(2);
     } catch (e) {}
 }
 
