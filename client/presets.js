@@ -403,13 +403,13 @@ window.TEXT_COMPOSER_PRESETS = [
     tags: ["hacker", "decode", "matrix", "tech"],
     sampleText: "DECODE",
     defaultDuration: 1.1,
-    defaultStagger: 70,
+    defaultStagger: 65,
     defaultOvershoot: 0,
     defaultBasedOn: "chars",
-    preview: { mode: "decode", unit: "chars", ease: "step" },
+    preview: { mode: "decode", unit: "chars", ease: "linear" },
     ae: {
-      ease: "step",
-      props: { opacity: 0, charOffset: 18 }
+      ease: "decode",
+      props: { charOffset: 26 }
     }
   },
   {
@@ -491,7 +491,8 @@ window.TEXT_COMPOSER_PRESETS = [
     preview: { mode: "stretch-x", unit: "words", ease: "back" },
     ae: {
       ease: "back",
-      props: { scale: [220, 30], blur: [24, 0], opacity: 0 }
+      centerPivot: true,
+      props: { scale: [210, 35], blur: [14, 0], opacity: 0 }
     }
   },
 
@@ -632,12 +633,13 @@ window.TEXT_COMPOSER_PRESETS = [
     defaultDuration: 1.0,
     defaultStagger: 0,
     defaultOvershoot: 0,
-    defaultBasedOn: "words",
-    preview: { mode: "loop-pulse", unit: "words", ease: "linear" },
+    defaultBasedOn: "all",
+    preview: { mode: "loop-pulse", unit: "whole", ease: "linear" },
     ae: {
       loopMode: "pulse",
       loopSpeed: 2.0,
       loopIntensity: 100,
+      centerPivot: true,
       props: { scale: [112, 112] }
     }
   },
@@ -759,7 +761,7 @@ window.TEXT_COMPOSER_PRESETS = [
     defaultStagger: 60,
     defaultOvershoot: 10,
     defaultBasedOn: "chars",
-    preview: { mode: "split-flap", unit: "chars", ease: "step" },
+    preview: { mode: "split-flap", unit: "chars", ease: "back" },
     ae: {
       perChar3D: true,
       ease: "back",
@@ -808,17 +810,17 @@ window.TEXT_COMPOSER_PRESETS = [
     category: "editorial",
     tags: ["box", "background", "lower-third", "title", "clean"],
     sampleText: "BOXED",
-    defaultDuration: 0.75,
-    defaultStagger: 30,
-    defaultOvershoot: 20,
+    defaultDuration: 0.8,
+    defaultStagger: 20,
+    defaultOvershoot: 0,
     defaultBasedOn: "words",
     preview: { mode: "auto-box", unit: "whole", ease: "expo" },
     ae: {
       mask: true,
       ease: "expo",
       bgShape: "box",
-      bgColor: [0.18, 0.55, 1.0, 1],
-      props: { position: [0, 85] }
+      bgColor: [0.90, 0.34, 0.28, 1],
+      props: { position: [0, 68] }
     }
   },
   {
@@ -828,7 +830,7 @@ window.TEXT_COMPOSER_PRESETS = [
     tags: ["underline", "line", "bar", "minimal", "editorial"],
     sampleText: "HEADLINE",
     defaultDuration: 0.8,
-    defaultStagger: 35,
+    defaultStagger: 25,
     defaultOvershoot: 0,
     defaultBasedOn: "words",
     preview: { mode: "underline", unit: "whole", ease: "expo" },
@@ -836,8 +838,8 @@ window.TEXT_COMPOSER_PRESETS = [
       mask: true,
       ease: "expo",
       bgShape: "underline",
-      bgColor: [0.18, 0.55, 1.0, 1],
-      props: { position: [0, 90] }
+      bgColor: [0.98, 0.66, 0.44, 1],
+      props: { position: [0, 56] }
     }
   },
   {
@@ -846,15 +848,16 @@ window.TEXT_COMPOSER_PRESETS = [
     category: "editorial",
     tags: ["rgb", "chromatic", "glitch", "impact", "flash"],
     sampleText: "RGB HIT",
-    defaultDuration: 0.55,
-    defaultStagger: 25,
-    defaultOvershoot: 35,
+    defaultDuration: 0.48,
+    defaultStagger: 10,
+    defaultOvershoot: 30,
     defaultBasedOn: "words",
-    preview: { mode: "rgb-hit", unit: "words", ease: "back" },
+    preview: { mode: "rgb-hit", unit: "words", ease: "impact" },
     ae: {
-      ease: "back",
+      ease: "impact",
+      centerPivot: true,
       rgbHit: true,
-      props: { scale: [145, 145], opacity: 0, blur: [18, 0] }
+      props: { scale: [135, 135], opacity: 0, blur: [28, 0] }
     }
   },
 
@@ -1013,6 +1016,7 @@ window.TEXT_COMPOSER_PRESETS = [
     preview: { mode: "beat-slam", unit: "words", ease: "impact" },
     ae: {
       ease: "impact",
+      centerPivot: true,
       props: { scale: [185, 185], blur: [38, 12], opacity: 0 }
     }
   },
@@ -1022,15 +1026,16 @@ window.TEXT_COMPOSER_PRESETS = [
     category: "anime",
     tags: ["anime", "amv", "cyberpunk", "jitter", "tracking", "madhouse"],
     sampleText: "SYNAPSE",
-    defaultDuration: 0.8,
-    defaultStagger: 55,
+    defaultDuration: 0.85,
+    defaultStagger: 50,
     defaultOvershoot: 0,
     defaultBasedOn: "chars",
-    preview: { mode: "glitch-jitter", unit: "chars", ease: "glitch" },
+    preview: { mode: "cyber-tracking", unit: "whole", ease: "glitch" },
     ae: {
       ease: "glitch",
+      centerPivot: true,
       randomOrder: true,
-      props: { tracking: 55, position: [26, -16], opacity: 0 }
+      props: { tracking: 110, scale: [130, 85], blur: [14, 0], opacity: 0 }
     }
   },
   {
@@ -1046,7 +1051,8 @@ window.TEXT_COMPOSER_PRESETS = [
     preview: { mode: "shear-slice", unit: "chars", ease: "expo" },
     ae: {
       ease: "expo",
-      props: { position: [140, 0], skew: -38, opacity: 0 }
+      alternating: true,
+      props: { position: [140, 0], skew: -38 }
     }
   },
   {
@@ -1062,6 +1068,7 @@ window.TEXT_COMPOSER_PRESETS = [
     preview: { mode: "strobe", unit: "words", ease: "strobe" },
     ae: {
       ease: "strobe",
+      centerPivot: true,
       props: { scale: [130, 130], opacity: 0 }
     }
   },
@@ -1080,8 +1087,10 @@ window.TEXT_COMPOSER_PRESETS = [
     preview: { mode: "crt-on", unit: "whole", ease: "expo" },
     ae: {
       ease: "expo",
+      centerPivot: true,
+      visGate: true,
       fxEffect: "crtGlow",
-      props: { scale: [240, 4], blur: [28, 0], opacity: 0 }
+      props: { scale: [240, 4], blur: [28, 0] }
     }
   },
   {
@@ -1097,6 +1106,7 @@ window.TEXT_COMPOSER_PRESETS = [
     preview: { mode: "retro-stutter", unit: "chars", ease: "posterize12" },
     ae: {
       ease: "posterize12",
+      centerPivot: true,
       fxEffect: "hardShadow",
       props: { scale: [0, 0], rotation: -8, opacity: 0 }
     }
@@ -1131,10 +1141,9 @@ window.TEXT_COMPOSER_PRESETS = [
     defaultStagger: 45,
     defaultOvershoot: 0,
     defaultBasedOn: "chars",
-    preview: { mode: "rgb-hit", unit: "chars", ease: "flicker" },
+    preview: { mode: "tape-bleed", unit: "chars", ease: "flicker" },
     ae: {
       ease: "flicker",
-      rgbHit: true,
       fxEffect: "vhsBleed",
       props: { blur: [22, 4], opacity: 0 }
     }

@@ -357,27 +357,33 @@
         opacity = clamp01(p * 1.4);
         break;
       case "auto-box":
+        var boxP = clamp01(p * 1.45);
+        var txtP = clamp01((p - 0.18) / 0.82);
         opacity = 1;
-        el.style.padding = "3px 8px";
-        el.style.borderRadius = "4px";
-        el.style.background = "rgba(45, 140, 255, " + clamp01(p).toFixed(2) + ")";
-        transform = "scaleX(" + (0.2 + 0.8 * clamp01(p)).toFixed(3) + ") translate3d(0," + (inv * 10).toFixed(1) + "px,0)";
+        el.style.padding = "4px 10px";
+        el.style.borderRadius = "3px";
+        el.style.color = txtP > 0.05 ? "#F3F3F3" : "transparent";
+        el.style.background = "linear-gradient(90deg, #E65747 " + Math.round(boxP * 100) + "%, transparent " + Math.round(boxP * 100) + "%)";
+        transform = "translate3d(0," + ((1 - txtP) * 10).toFixed(1) + "px,0)";
         break;
       case "underline":
-        opacity = 1;
-        el.style.paddingBottom = "3px";
-        el.style.backgroundImage = "linear-gradient(#2d8cff, #2d8cff)";
+        var lineP = clamp01(p * 1.35);
+        var headP = clamp01((p - 0.12) / 0.88);
+        opacity = clamp01(headP * 1.6);
+        el.style.paddingBottom = "5px";
+        el.style.backgroundImage = "linear-gradient(#FAA971, #FAA971)";
         el.style.backgroundRepeat = "no-repeat";
         el.style.backgroundPosition = "0 100%";
-        el.style.backgroundSize = Math.round(clamp01(p) * 100) + "% 2.5px";
-        transform = "translate3d(0," + (inv * 12).toFixed(1) + "px,0)";
+        el.style.backgroundSize = Math.round(lineP * 100) + "% 2px";
+        transform = "translate3d(0," + ((1 - headP) * 14).toFixed(1) + "px,0)";
         break;
       case "rgb-hit":
-        var scRgb = 1 + inv * 0.45;
-        var splitPx = (inv * 7).toFixed(1);
-        transform = "scale(" + scRgb.toFixed(3) + ")";
-        el.style.textShadow = inv > 0.03 ? (splitPx + "px 0 #ff2a6d, -" + splitPx + "px 0 #05d9e8") : "none";
-        opacity = clamp01(p * 1.6);
+        var scRgb = 1 + (1 - p) * 0.35;
+        var hitAmt = p < 0.92 ? (Math.exp(-4.5 * clamp01(p)) * Math.cos(p * 26) * 9) : 0;
+        var absHit = Math.abs(hitAmt).toFixed(1);
+        transform = "scale(" + Math.max(0.92, scRgb).toFixed(3) + ")";
+        el.style.textShadow = Math.abs(hitAmt) > 0.4 ? (absHit + "px 0 #ff2058, -" + absHit + "px 0 #00e5ff") : "none";
+        opacity = p > 0.02 ? 1 : 0;
         break;
       // ---- NEW PACK 5: BRUTALIST & PRINT ----
       case "hard-snap":
@@ -434,9 +440,16 @@
         filter = inv > 0.05 ? "blur(" + (Math.abs(inv) * 6).toFixed(1) + "px)" : "none";
         opacity = p > 0.02 ? 1 : 0;
         break;
+      case "cyber-tracking":
+        var trJitter = inv > 0.02 ? (inv * 0.55 + Math.sin(nowMs * 0.08) * 0.12 * inv) : 0;
+        letterSpacing = (0.06 + Math.max(0, trJitter)).toFixed(3) + "em";
+        transform = "scale(" + (1 + inv * 0.25).toFixed(3) + "," + (1 - inv * 0.15).toFixed(3) + ")";
+        filter = inv > 0.04 ? "blur(" + (inv * 4).toFixed(1) + "px)" : "none";
+        opacity = p > 0.04 ? 1 : 0;
+        break;
       case "shear-slice":
         var dirS = unitIdx % 2 === 0 ? 1 : -1;
-        transform = "translate3d(" + (dirS * inv * 38).toFixed(1) + "px,0,0) skewX(" + (-inv * 34).toFixed(1) + "deg)";
+        transform = "translate3d(" + (dirS * inv * 38).toFixed(1) + "px,0,0) skewX(" + (-dirS * inv * 34).toFixed(1) + "deg)";
         opacity = clamp01(p * 1.5);
         break;
       case "strobe":
@@ -462,6 +475,11 @@
         transform = "translate3d(" + vx.toFixed(1) + "px," + vy.toFixed(1) + "px,0) skewX(" + (vx * 0.7).toFixed(1) + "deg)";
         el.style.textShadow = "2px 0 rgba(255,42,109,0.65), -2px 0 rgba(5,217,232,0.65)";
         opacity = 1;
+        break;
+      case "tape-bleed":
+        opacity = p >= 0.5 ? 1 : 0;
+        filter = inv > 0.04 ? "blur(" + (inv * 5).toFixed(1) + "px)" : "none";
+        el.style.textShadow = "2.5px 0 rgba(255,36,86,0.75), -2.5px 0 rgba(10,224,255,0.75)";
         break;
       default:
         opacity = clamp01(p);

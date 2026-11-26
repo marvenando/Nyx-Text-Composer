@@ -160,14 +160,34 @@ function tc_addColor(effects, name, rgba) {
 }
 
 function tc_setExprSelector(expSel, basedOnCode, exprStr) {
-    var basedOnProp = expSel.property("ADBE Text Range Type2") || expSel.property("Based On") || expSel.property(1);
+    var basedOnProp = expSel.property("ADBE Text Range Type2") || expSel.property("Based On") || expSel.property(4);
     if (basedOnProp) {
         try { basedOnProp.setValue(basedOnCode); } catch (e) {}
     }
-    var amountProp = expSel.property("ADBE Text Expressible Amount") || expSel.property("Amount") || expSel.property(2);
+    var amountProp = expSel.property("ADBE Text Expressible Amount") || expSel.property("Amount") || expSel.property(1);
     if (amountProp) {
         amountProp.expression = exprStr;
     }
+}
+
+function tc_setAnchorGrouping(layer, basedOn, centerPivot) {
+    try {
+        var textProp = layer.property("ADBE Text Properties");
+        var moreOpts = textProp.property("ADBE Text More Options");
+        var grpProp = moreOpts.property("ADBE Text Anchor Point Option");
+        if (grpProp) {
+            // 1 = Character, 2 = Word, 3 = Line, 4 = All
+            var code = 1;
+            if (basedOn === "words") code = 2;
+            else if (basedOn === "lines") code = 3;
+            else if (basedOn === "all") code = 4;
+            grpProp.setValue(code);
+        }
+        var alignProp = moreOpts.property("ADBE Text Anchor Point Align");
+        if (alignProp) {
+            alignProp.setValue(centerPivot ? [0, -35] : [0, 0]);
+        }
+    } catch (e) {}
 }
 
 function tc_ensureControls(layer, prefix, cfg) {
@@ -241,49 +261,17 @@ function tc_ensureBgShape(comp, layer, shapeType, bgColor, direction) {
     }
 
     var effects = shape.property("ADBE Effect Parade");
-    tc_addColor(effects, TC_PREFIX_BG + " Color", bgColor || [0.18, 0.55, 1.0, 1]);
-    tc_addSlider(effects, TC_PREFIX_BG + " Pad X", shapeType === "underline" ? 8 : 26);
-    tc_addSlider(effects, TC_PREFIX_BG + " Pad Y", shapeType === "underline" ? 6 : 14);
+    tc_addColor(effects, TC_PREFIX_BG + " Color", bgColor || [0.90, 0.34, 0.28, 1]);
+    var defPadX = shapeType === "underline" ? 4 : (shapeType === "box" ? 36 : 26);
+    var defPadY = shapeType === "underline" ? 4 : (shapeType === "box" ? 18 : 14);
+    tc_addSlider(effects, TC_PREFIX_BG + " Pad X", defPadX);
+    tc_addSlider(effects, TC_PREFIX_BG + " Pad Y", defPadY);
 
     var contents = shape.property("ADBE Root Vectors Group");
     var grp = contents.addProperty("ADBE Vector Group");
     grp.name = "Auto Shape";
 
     var grpContents = grp.property("ADBE Vectors Group");
-    // Add all children first (calling addProperty invalidates prior sibling references in AE)
-    grpContents.addProperty("ADBE Vector Shape - Rect");
-    if (shapeType === "brackets") {
-        grpContents.addProperty("ADBE Vector Graphic - Stroke");
-    } else {
-        grpContents.addProperty("ADBE Vector Graphic - Fill");
-    }
-
-    // Re-fetch references cleanly after all addProperty calls
-    var rect = grpContents.property("ADBE Vector Shape - Rect");
-    if (shapeType === "brackets") {
-        var stroke = grpContents.property("ADBE Vector Graphic - Stroke");
-        stroke.property("ADBE Vector Stroke Color").expression = 'effect("' + TC_PREFIX_BG + ' Color")("Color")';
-        stroke.property("ADBE Vector Stroke Width").setValue(4);
-        rect.property("ADBE Vector Rect Roundness").setValue(0);
-    } else {
-        var fill = grpContents.property("ADBE Vector Graphic - Fill");
-        fill.property("ADBE Vector Fill Color").expression = 'effect("' + TC_PREFIX_BG + ' Color")("Color")';
-        if (shapeType === "box") {
-            rect.property("ADBE Vector Rect Roundness").setValue(14);
-        } else if (shapeType === "highlighter") {
-            rect.property("ADBE Vector Rect Roundness").setValue(6);
-        } else if (shapeType === "wipeBlock") {
-            rect.property("ADBE Vector Rect Roundness").setValue(0);
-        } else {
-            rect.property("ADBE Vector Rect Roundness").setValue(3);
-        }
-    }
-
-    var rectSize = rect.property("ADBE Vector Rect Size");
-    var rectPos = rect.property("ADBE Vector Rect Position");
-    var grpTransform = grp.property("ADBE Vector Transform Group");
-    var grpPos = grpTransform.property("ADBE Vector Position");
-    var grpScale = grpTransform.property("ADBE Vector Scale");
 
     var useIn = (direction === "in" || direction === "both");
     var useOut = (direction === "out" || direction === "both");
@@ -312,11 +300,80 @@ function tc_ensureBgShape(comp, layer, shapeType, bgColor, direction) {
         progLines.push("s *= eOut;");
     }
 
-    if (shapeType === "highlighter" || shapeType === "underline") {
-        // Direct Rect Size + Rect Position wipe: zero corner distortion, pixel-aligned left-to-right swipe
+    if (shapeType === "brackets") {
+        // Real open [  ] HUD Corner Brackets using two open vector paths (constant stroke width, no scaling distortion)
+        grpContents.addProperty("ADBE Vector Shape - Group").name = "Left Bracket";
+        grpContents.addProperty("ADBE Vector Shape - Group").name = "Right Bracket";
+        grpContents.addProperty("ADBE Vector Graphic - Stroke");
+
+        var leftPath = grpContents.property("Left Bracket").property("ADBE Vector Shape");
+        var rightPath = grpContents.property("Right Bracket").property("ADBE Vector Shape");
+        var bStroke = grpContents.property("ADBE Vector Graphic - Stroke");
+        bStroke.property("ADBE Vector Stroke Color").expression = 'effect("' + TC_PREFIX_BG + ' Color")("Color")';
+        bStroke.property("ADBE Vector Stroke Width").setValue(4);
+        bStroke.property("ADBE Vector Stroke Opacity").expression = progLines.concat([
+            "clamp(s * 3.5, 0, 1) * 100;"
+        ]).join("\n");
+
+        var brCommon = progLines.concat([
+            "var xL = r.left - padX;",
+            "var xR = r.left + r.width + padX;",
+            "var yT = r.top - padY;",
+            "var yB = r.top + r.height + padY;",
+            "var cx = r.left + r.width * 0.5;",
+            "var arm = Math.min(22, (xR - xL) * 0.2);",
+            "var curL = cx - (cx - xL) * (0.25 + 0.75 * s);",
+            "var curR = cx + (xR - cx) * (0.25 + 0.75 * s);"
+        ]);
+
+        leftPath.expression = brCommon.concat([
+            "createPath([[curL + arm, yT], [curL, yT], [curL, yB], [curL + arm, yB]], [], [], false);"
+        ]).join("\n");
+
+        rightPath.expression = brCommon.concat([
+            "createPath([[curR - arm, yT], [curR, yT], [curR, yB], [curR - arm, yB]], [], [], false);"
+        ]).join("\n");
+
+        var bTr = grp.property("ADBE Vector Transform Group");
+        bTr.property("ADBE Vector Position").setValue([0, 0]);
+        bTr.property("ADBE Vector Scale").setValue([100, 100]);
+
+        try {
+            shape.selected = false;
+            layer.selected = true;
+        } catch (e) {}
+        return;
+    }
+
+    // Add all children first (calling addProperty invalidates prior sibling references in AE)
+    grpContents.addProperty("ADBE Vector Shape - Rect");
+    grpContents.addProperty("ADBE Vector Graphic - Fill");
+
+    // Re-fetch references cleanly after all addProperty calls
+    var rect = grpContents.property("ADBE Vector Shape - Rect");
+    var fill = grpContents.property("ADBE Vector Graphic - Fill");
+    fill.property("ADBE Vector Fill Color").expression = 'effect("' + TC_PREFIX_BG + ' Color")("Color")';
+    if (shapeType === "box") {
+        rect.property("ADBE Vector Rect Roundness").setValue(6);
+    } else if (shapeType === "highlighter") {
+        rect.property("ADBE Vector Rect Roundness").setValue(6);
+    } else if (shapeType === "wipeBlock") {
+        rect.property("ADBE Vector Rect Roundness").setValue(0);
+    } else {
+        rect.property("ADBE Vector Rect Roundness").setValue(2);
+    }
+
+    var rectSize = rect.property("ADBE Vector Rect Size");
+    var rectPos = rect.property("ADBE Vector Rect Position");
+    var grpTransform = grp.property("ADBE Vector Transform Group");
+    var grpPos = grpTransform.property("ADBE Vector Position");
+    var grpScale = grpTransform.property("ADBE Vector Scale");
+
+    if (shapeType === "highlighter" || shapeType === "underline" || shapeType === "box") {
+        // Direct Rect Size + Rect Position wipe: zero corner distortion, pixel-aligned left-to-right reveal
         var fullW = "(r.width + padX * 2)";
         var hExpr = shapeType === "underline" ? "Math.max(2, padY)" : "(r.height + padY * 2)";
-        var yExpr = shapeType === "underline" ? "(r.top + r.height + 12)" : "(r.top + r.height * 0.5)";
+        var yExpr = shapeType === "underline" ? "(r.top + r.height + 16)" : "(r.top + r.height * 0.5)";
 
         rectSize.expression = progLines.concat([
             "var w = " + fullW + " * s;",
@@ -429,10 +486,11 @@ function tc_applyLayerEffect(layer, fxType) {
         } else if (fxType === "hardShadow" && effects.canAddProperty("ADBE Drop Shadow")) {
             var ds = effects.addProperty("ADBE Drop Shadow");
             ds.name = TC_PREFIX_EFX + " Hard Shadow";
-            try { ds.property("ADBE Drop Shadow-0002").setValue(230); } catch (e) {} // Opacity
-            try { ds.property("ADBE Drop Shadow-0003").setValue(135); } catch (e) {} // Direction
-            try { ds.property("ADBE Drop Shadow-0004").setValue(8); } catch (e) {}   // Distance
-            try { ds.property("ADBE Drop Shadow-0005").setValue(0); } catch (e) {}   // Softness
+            try { (ds.property("Shadow Color") || ds.property(1)).setValue([1.0, 0.16, 0.43, 1]); } catch (e) {} // Hot pink #FF2A6D
+            try { (ds.property("Opacity") || ds.property(2)).setValue(255); } catch (e) {}
+            try { (ds.property("Direction") || ds.property(3)).setValue(135); } catch (e) {}
+            try { (ds.property("Distance") || ds.property(4)).setValue(7); } catch (e) {}
+            try { (ds.property("Softness") || ds.property(5)).setValue(0); } catch (e) {}
         } else if (fxType === "vhsTracking" || fxType === "vhsBleed") {
             // 1. Horizontal analog tape tracking distortion (Wave Warp)
             if (effects.canAddProperty("ADBE Wave Warp")) {
@@ -489,38 +547,39 @@ function tc_applyRgbHit(layer, direction) {
     var useIn = (direction === "in" || direction === "both");
     var useOut = (direction === "out" || direction === "both");
 
+    // Sharp optical impact shudder: spikes on frame 1, oscillates & decays cleanly to 0
     var distLines = ["var amt = 0;"];
     if (useIn) {
-        distLines.push('var dIn = 0.55; try { dIn = Math.max(0.05, effect("' + TC_PREFIX_IN + ' Duration (s)")("Slider")); } catch(e) {}');
+        distLines.push('var dIn = 0.48; try { dIn = Math.max(0.05, effect("' + TC_PREFIX_IN + ' Duration (s)")("Slider")); } catch(e) {}');
         distLines.push('try { dIn = Math.max(0.05, marker.key("In").time - inPoint); } catch(e) {}');
-        distLines.push("var tIn = clamp((time - inPoint) / (dIn * 0.8), 0, 1);");
-        distLines.push("if (tIn > 0 && tIn < 1) amt = Math.max(amt, Math.sin(tIn * Math.PI) * 14);");
+        distLines.push("var tIn = clamp((time - inPoint) / dIn, 0, 1);");
+        distLines.push("if (tIn > 0 && tIn < 0.92) amt = Math.max(amt, Math.abs(Math.cos(tIn * 36) * Math.exp(-6.5 * tIn)) * 18);");
     }
     if (useOut) {
-        distLines.push('var dOut = 0.55; try { dOut = Math.max(0.05, effect("' + TC_PREFIX_OUT + ' Duration (s)")("Slider")); } catch(e) {}');
+        distLines.push('var dOut = 0.48; try { dOut = Math.max(0.05, effect("' + TC_PREFIX_OUT + ' Duration (s)")("Slider")); } catch(e) {}');
         distLines.push('try { dOut = Math.max(0.05, outPoint - marker.key("Out").time); } catch(e) {}');
-        distLines.push("var tOut = clamp((time - (outPoint - dOut)) / (dOut * 0.8), 0, 1);");
-        distLines.push("if (tOut > 0 && tOut < 1) amt = Math.max(amt, Math.sin(tOut * Math.PI) * 14);");
+        distLines.push("var tOut = clamp((time - (outPoint - dOut)) / dOut, 0, 1);");
+        distLines.push("if (tOut > 0.08 && tOut < 1) amt = Math.max(amt, Math.abs(Math.cos((1 - tOut) * 36) * Math.exp(-6.5 * (1 - tOut))) * 18);");
     }
     var distExpr = distLines.concat(["amt;"]).join("\n");
-    var opacExpr = distLines.concat(["amt > 0.2 ? 210 : 0;"]).join("\n");
+    var opacExpr = distLines.concat(["amt > 0.5 ? 235 : 0;"]).join("\n");
 
     try {
         var rgbRed = effects.addProperty("ADBE Drop Shadow");
         rgbRed.name = TC_PREFIX_RGB + " Red Split";
-        (rgbRed.property("Shadow Color") || rgbRed.property(1)).setValue([1.0, 0.12, 0.36, 1]);
+        (rgbRed.property("Shadow Color") || rgbRed.property(1)).setValue([1.0, 0.12, 0.34, 1]);
         (rgbRed.property("Opacity") || rgbRed.property(2)).expression = opacExpr;
         (rgbRed.property("Direction") || rgbRed.property(3)).setValue(270);
         (rgbRed.property("Distance") || rgbRed.property(4)).expression = distExpr;
-        (rgbRed.property("Softness") || rgbRed.property(5)).setValue(2);
+        (rgbRed.property("Softness") || rgbRed.property(5)).setValue(0);
 
         var rgbCyan = effects.addProperty("ADBE Drop Shadow");
         rgbCyan.name = TC_PREFIX_RGB + " Cyan Split";
-        (rgbCyan.property("Shadow Color") || rgbCyan.property(1)).setValue([0.02, 0.88, 1.0, 1]);
+        (rgbCyan.property("Shadow Color") || rgbCyan.property(1)).setValue([0.0, 0.90, 1.0, 1]);
         (rgbCyan.property("Opacity") || rgbCyan.property(2)).expression = opacExpr;
         (rgbCyan.property("Direction") || rgbCyan.property(3)).setValue(90);
         (rgbCyan.property("Distance") || rgbCyan.property(4)).expression = distExpr;
-        (rgbCyan.property("Softness") || rgbCyan.property(5)).setValue(2);
+        (rgbCyan.property("Softness") || rgbCyan.property(5)).setValue(0);
     } catch (e) {}
 }
 
@@ -555,7 +614,7 @@ function tc_enablePerChar3D(comp, layer) {
 }
 
 // ==================== EXPRESSION GENERATOR ====================
-function tc_buildSelectorExpression(prefix, isOut, easeType, randomOrder, centerOut, isKaraoke) {
+function tc_buildSelectorExpression(prefix, isOut, easeType, randomOrder, centerOut, isKaraoke, alternating) {
     var lines = [];
     lines.push('var dur = Math.max(0.05, effect("' + prefix + ' Duration (s)")("Slider"));');
     if (isOut) {
@@ -627,14 +686,26 @@ function tc_buildSelectorExpression(prefix, isOut, easeType, randomOrder, center
         lines.push("var p = (t <= 0.01) ? 0 : (t >= 0.99 ? 1 : (t < 0.35 ? 1 - Math.pow(1 - (t / 0.35), 3) : 1 + Math.sin((t - 0.35) * 42) * (0.14 + ovr * 0.25) * Math.exp(-8 * (t - 0.35))));");
     } else if (easeType === "strobe") {
         lines.push("var p = (t <= 0.01) ? 0 : (t >= 0.99 ? 1 : (t < 0.45 ? (Math.floor(t * 16) % 2 == 0 ? 1 : 0) : 1));");
+    } else if (easeType === "decode") {
+        // Rapidly scramble visible characters through random offsets, then lock cleanly to 0
+        lines.push("var frameStep = Math.floor(time * 22);");
+        lines.push("var rnd = Math.abs(Math.sin((idx + 1) * 19.7 + frameStep * 12.9898));");
+        if (isOut) {
+            lines.push("var amt = (t <= 0.02 || t >= 0.95) ? 0 : (0.25 + rnd * 0.75) * 100;");
+        } else {
+            lines.push("var amt = (t <= 0.02 || t >= 0.95) ? 0 : (0.25 + rnd * 0.75) * 100;");
+        }
+        lines.push("amt;");
+        return lines.join("\n");
     } else {
         lines.push("var p = t;");
     }
 
+    var altMult = alternating ? " * ((idx % 2 == 0) ? 1 : -1)" : "";
     if (isOut) {
-        lines.push("p * 100;");
+        lines.push("p * 100" + altMult + ";");
     } else {
-        lines.push("(1 - p) * 100;");
+        lines.push("(1 - p) * 100" + altMult + ";");
     }
 
     return lines.join("\n");
@@ -762,6 +833,9 @@ function tc_applyDirection(comp, layer, cfg, isOut) {
     if (cfg.basedOn === "words") basedOnCode = 3;
     else if (cfg.basedOn === "lines") basedOnCode = 4;
 
+    var needsCenterPivot = !!(ae && ae.centerPivot) ||
+        (cfg.id !== "stretch_vertical" && (!!props.scale || typeof props.rotation === "number" || typeof props.rotationX === "number" || typeof props.rotationY === "number"));
+    tc_setAnchorGrouping(layer, cfg.basedOn, needsCenterPivot);
     tc_setExprSelector(
         expSel,
         basedOnCode,
@@ -771,9 +845,31 @@ function tc_applyDirection(comp, layer, cfg, isOut) {
             ae.ease || "expo",
             !!ae.randomOrder,
             !!ae.centerOut,
-            cfg.id === "social_karaoke_pop"
+            cfg.id === "social_karaoke_pop",
+            !!ae.alternating
         )
     );
+
+    // Companion visibility/fade gate for Decode, CRT Power-On, and Alternating Slice presets
+    if (ae.ease === "decode" || ae.visGate || ae.alternating) {
+        var visAnim = animators.addProperty("ADBE Text Animator");
+        visAnim.name = prefix + " " + cfg.name + " Visibility";
+        var visProps = visAnim.property("ADBE Text Animator Properties");
+        visProps.addProperty("ADBE Text Opacity").setValue(0);
+        var visSels = visAnim.property("ADBE Text Selectors");
+        for (var v = visSels.numProperties; v >= 1; v--) {
+            visSels.property(v).remove();
+        }
+        var visSel = visSels.addProperty("ADBE Text Expressible Selector");
+        var visExpr;
+        if (ae.alternating) {
+            visExpr = tc_buildSelectorExpression(prefix, isOut, "expo", !!ae.randomOrder, !!ae.centerOut, false, false);
+        } else {
+            visExpr = tc_buildSelectorExpression(prefix, isOut, "step", !!ae.randomOrder, !!ae.centerOut, false, false)
+                .replace("var p = (t >= 0.5) ? 1 : 0;", isOut ? "var p = (t >= 0.94) ? 1 : 0;" : "var p = (t > 0.02) ? 1 : 0;");
+        }
+        tc_setExprSelector(visSel, basedOnCode, visExpr);
+    }
 
     if (ae.mask) {
         tc_ensureMask(layer);
@@ -821,7 +917,11 @@ function tc_applyLoopFX(layer, cfg) {
     var expSel = selectors.addProperty("ADBE Text Expressible Selector");
     var basedOnCode = 1;
     if (cfg.basedOn === "words") basedOnCode = 3;
-    else if (cfg.basedOn === "lines") basedOnCode = 4;
+    else if (cfg.basedOn === "lines" || cfg.basedOn === "all") basedOnCode = 4;
+
+    var needsCenterPivot = !!(ae && ae.centerPivot) ||
+        (cfg.id !== "stretch_vertical" && (!!props.scale || typeof props.rotation === "number" || typeof props.rotationX === "number" || typeof props.rotationY === "number"));
+    tc_setAnchorGrouping(layer, cfg.basedOn, needsCenterPivot);
 
     var lines = [
         'var spd = Math.max(0.05, effect("' + TC_PREFIX_FX + ' Speed")("Slider"));',
@@ -839,7 +939,7 @@ function tc_applyLoopFX(layer, cfg) {
         lines.push("var prog = clamp((time - inPoint) / Math.max(0.1, outPoint - inPoint), 0, 1);");
         lines.push("prog * spd * inten;");
     } else if (mode === "pulse") {
-        lines.push("((Math.sin(time * spd * 3.14159 + idx * 0.65) + 1) * 0.5) * inten;");
+        lines.push("((Math.sin(time * spd * 3.14159) + 1) * 0.5) * inten;");
     } else if (mode === "hue") {
         lines.push("((time * spd * 0.5 + idx * 0.14) % 1) * inten;");
     } else if (mode === "vhs") {
