@@ -262,8 +262,8 @@ function tc_ensureBgShape(comp, layer, shapeType, bgColor, direction) {
 
     var effects = shape.property("ADBE Effect Parade");
     tc_addColor(effects, TC_PREFIX_BG + " Color", bgColor || [0.90, 0.34, 0.28, 1]);
-    var defPadX = shapeType === "underline" ? 4 : (shapeType === "box" ? 36 : 26);
-    var defPadY = shapeType === "underline" ? 4 : (shapeType === "box" ? 18 : 14);
+    var defPadX = (shapeType === "underline" || shapeType === "horizon") ? 4 : (shapeType === "box" ? 36 : 26);
+    var defPadY = shapeType === "horizon" ? 2 : (shapeType === "underline" ? 4 : (shapeType === "box" ? 18 : 14));
     tc_addSlider(effects, TC_PREFIX_BG + " Pad X", defPadX);
     tc_addSlider(effects, TC_PREFIX_BG + " Pad Y", defPadY);
 
@@ -369,21 +369,28 @@ function tc_ensureBgShape(comp, layer, shapeType, bgColor, direction) {
     var grpPos = grpTransform.property("ADBE Vector Position");
     var grpScale = grpTransform.property("ADBE Vector Scale");
 
-    if (shapeType === "highlighter" || shapeType === "underline" || shapeType === "box") {
-        // Direct Rect Size + Rect Position wipe: zero corner distortion, pixel-aligned left-to-right reveal
+    if (shapeType === "highlighter" || shapeType === "underline" || shapeType === "box" || shapeType === "horizon") {
+        // Direct Rect Size + Rect Position wipe: zero corner distortion, pixel-aligned reveal
         var fullW = "(r.width + padX * 2)";
-        var hExpr = shapeType === "underline" ? "Math.max(2, padY)" : "(r.height + padY * 2)";
-        var yExpr = shapeType === "underline" ? "(r.top + r.height + 16)" : "(r.top + r.height * 0.5)";
+        var hExpr = (shapeType === "underline" || shapeType === "horizon") ? "Math.max(2, padY)" : "(r.height + padY * 2)";
+        var yExpr = (shapeType === "underline" || shapeType === "horizon") ? "(r.top + r.height + 16)" : "(r.top + r.height * 0.5)";
 
         rectSize.expression = progLines.concat([
             "var w = " + fullW + " * s;",
             "[Math.max(0, w), " + hExpr + "];"
         ]).join("\n");
 
-        rectPos.expression = progLines.concat([
-            "var w = " + fullW + " * s;",
-            "[r.left - padX + w * 0.5, " + yExpr + "];"
-        ]).join("\n");
+        if (shapeType === "horizon") {
+            // Draws symmetrically outward from horizontal center
+            rectPos.expression = progLines.concat([
+                "[r.left + r.width * 0.5, " + yExpr + "];"
+            ]).join("\n");
+        } else {
+            rectPos.expression = progLines.concat([
+                "var w = " + fullW + " * s;",
+                "[r.left - padX + w * 0.5, " + yExpr + "];"
+            ]).join("\n");
+        }
 
         grpPos.setValue([0, 0]);
         grpScale.setValue([100, 100]);
@@ -879,12 +886,16 @@ function tc_applyDirection(comp, layer, cfg, isOut) {
 }
 
 // ==================== APPLY CONTINUOUS LOOP / FX ====================
-function tc_applyLoopFX(layer, cfg) {
+function tc_applyLoopFX(comp, layer, cfg) {
     var ae = cfg.ae || {};
     var props = ae.props || {};
     var mode = ae.loopMode || "wave";
 
     tc_removeByPrefix(layer, TC_PREFIX_FX);
+
+    if (ae.perChar3D) {
+        tc_enablePerChar3D(comp, layer);
+    }
 
     var effects = layer.property("ADBE Effect Parade");
     tc_addSlider(effects, TC_PREFIX_FX + " Speed", ae.loopSpeed || 2);
@@ -945,6 +956,18 @@ function tc_applyLoopFX(layer, cfg) {
     } else if (mode === "vhs") {
         lines.push("var gl = Math.sin(time * spd * 9.3) > 0.92 ? 1.8 : 0.45;");
         lines.push("Math.sin(time * spd * 2.1 + idx * 0.4) * gl * inten;");
+    } else if (mode === "neonFlicker") {
+        lines.push("var n = Math.sin(time * spd * 3.1 + idx * 4.7) + Math.cos(time * spd * 1.9 + idx * 2.3);");
+        lines.push("(n < -1.15 ? 0.85 : 0) * inten;");
+    } else if (mode === "shimmer") {
+        lines.push("var tot = Math.max(1, textTotal - 1);");
+        lines.push("var ph = ((time * spd * 0.7) % 1.8) - 0.4;");
+        lines.push("var d = Math.abs((idx / tot) - ph);");
+        lines.push("Math.max(0, 1 - d * 3.5) * inten;");
+    } else if (mode === "ripple") {
+        lines.push("((Math.sin(time * spd * 3.14159 + idx * 0.7) + 1) * 0.5) * inten;");
+    } else if (mode === "rumble") {
+        lines.push("Math.sin(time * spd * 3.7) * Math.cos(time * spd * 2.3) * inten;");
     } else {
         lines.push("Math.sin(time * spd * 3.14159) * inten;");
     }
@@ -1078,7 +1101,7 @@ function TextComposer_applyPreset(jsonStr) {
             var ae = cfg.ae || {};
 
             if (cfg.direction === "fx") {
-                tc_applyLoopFX(layer, cfg);
+                tc_applyLoopFX(comp, layer, cfg);
                 if (ae.fxEffect) {
                     tc_applyLayerEffect(layer, ae.fxEffect);
                 } else {

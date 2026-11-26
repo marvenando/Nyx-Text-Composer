@@ -481,6 +481,85 @@
         filter = inv > 0.04 ? "blur(" + (inv * 5).toFixed(1) + "px)" : "none";
         el.style.textShadow = "2.5px 0 rgba(255,36,86,0.75), -2.5px 0 rgba(10,224,255,0.75)";
         break;
+      // ---- NEW PACK 9: LUXURY & FASHION ----
+      case "velvet-serif":
+        letterSpacing = (0.06 + inv * 0.34).toFixed(3) + "em";
+        transform = "scale(" + (1 + inv * 0.08).toFixed(3) + ")";
+        opacity = clamp01(p);
+        break;
+      case "3d-whisper":
+        transform = "rotateY(" + (inv * 30).toFixed(1) + "deg)";
+        filter = inv > 0.03 ? "blur(" + (inv * 5).toFixed(1) + "px)" : "none";
+        opacity = clamp01(p);
+        break;
+      case "silk-curtain":
+        transform = "translate3d(0," + (inv * 28).toFixed(1) + "px,0) scale(" + (1 + inv * 0.08).toFixed(3) + ")";
+        opacity = 1;
+        break;
+      case "horizon-line":
+        var hLine = clamp01(p * 1.35);
+        var hTxt = clamp01((p - 0.12) / 0.88);
+        opacity = clamp01(hTxt * 1.6);
+        el.style.paddingBottom = "5px";
+        el.style.backgroundImage = "linear-gradient(var(--text-primary), var(--text-primary))";
+        el.style.backgroundRepeat = "no-repeat";
+        el.style.backgroundPosition = "50% 100%";
+        el.style.backgroundSize = Math.round(hLine * 100) + "% 1.5px";
+        transform = "translate3d(0," + ((1 - hTxt) * 14).toFixed(1) + "px,0)";
+        break;
+      // ---- NEW PACK 10: KINETIC POSTER ----
+      case "staircase":
+        var dirY = unitIdx % 2 === 0 ? 1 : -1;
+        transform = "translate3d(0," + (dirY * inv * 24).toFixed(1) + "px,0)";
+        opacity = clamp01(p * 1.5);
+        break;
+      case "accordion":
+        var sxAcc = 0.4 + 0.6 * clamp01(p);
+        letterSpacing = (0.06 - inv * 0.2).toFixed(3) + "em";
+        transform = "scaleX(" + sxAcc.toFixed(3) + ")";
+        opacity = clamp01(p * 1.5);
+        break;
+      case "pendulum":
+        transform = "rotate(" + (inv * 38).toFixed(1) + "deg)";
+        opacity = clamp01(p * 1.6);
+        break;
+      // ---- NEW PACK 11: MORE LOOPS & FX ----
+      case "loop-neon-flicker":
+        var nf = Math.sin(nowMs * 0.032 + unitIdx * 4.7) + Math.cos(nowMs * 0.019 + unitIdx * 2.1);
+        opacity = nf > -0.75 ? 1 : 0.15;
+        el.style.textShadow = opacity > 0.5 ? "0 0 8px rgba(250,169,113,0.75)" : "none";
+        break;
+      case "loop-shimmer":
+        var shPhase = ((nowMs * 0.0022) % 2) - 0.5;
+        var dist = Math.abs((unitIdx / Math.max(1, totalUnits - 1)) - shPhase);
+        var glint = Math.max(0, 1 - dist * 3.5);
+        transform = "scale(" + (1 + glint * 0.14).toFixed(3) + ")";
+        el.style.textShadow = glint > 0.15 ? ("0 0 " + (glint * 10).toFixed(1) + "px rgba(255,255,255,0.85)") : "none";
+        opacity = 1;
+        break;
+      case "loop-ripple":
+        var rSy = 1 + (Math.sin(nowMs * 0.007 + unitIdx * 0.7) * 0.5 + 0.5) * 0.28;
+        transform = "scaleY(" + rSy.toFixed(3) + ")";
+        opacity = 1;
+        break;
+      case "loop-3d-sway":
+        var swY = Math.sin(nowMs * 0.0045 + unitIdx * 0.5) * 24;
+        var swPos = Math.cos(nowMs * 0.0045 + unitIdx * 0.5) * 4;
+        transform = "rotateY(" + swY.toFixed(1) + "deg) translate3d(0," + swPos.toFixed(1) + "px,0)";
+        opacity = 1;
+        break;
+      case "loop-rumble":
+        var rx = Math.sin(nowMs * 0.095) * 2.8;
+        var ry = Math.cos(nowMs * 0.113) * 2.4;
+        var rr = Math.sin(nowMs * 0.071) * 1.8;
+        transform = "translate3d(" + rx.toFixed(1) + "px," + ry.toFixed(1) + "px,0) rotate(" + rr.toFixed(1) + "deg)";
+        opacity = 1;
+        break;
+      case "loop-pendulum":
+        var pr = Math.sin(nowMs * 0.004 + unitIdx * 0.6) * 8;
+        transform = "rotate(" + pr.toFixed(1) + "deg)";
+        opacity = 1;
+        break;
       default:
         opacity = clamp01(p);
     }

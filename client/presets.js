@@ -20,7 +20,9 @@ window.TEXT_COMPOSER_CATEGORIES = [
   { id: "brutalist", label: "Brutalist & Print" },
   { id: "hud", label: "Sci-Fi & HUD" },
   { id: "anime", label: "Anime & Impact" },
-  { id: "retro", label: "Retro & VHS" }
+  { id: "retro", label: "Retro & VHS" },
+  { id: "luxury", label: "Luxury & Fashion" },
+  { id: "kinetic", label: "Kinetic Poster" }
 ];
 
 window.TEXT_COMPOSER_PRESETS = [
@@ -1146,6 +1148,275 @@ window.TEXT_COMPOSER_PRESETS = [
       ease: "flicker",
       fxEffect: "vhsBleed",
       props: { blur: [22, 4], opacity: 0 }
+    }
+  },
+
+  // ==================== 17. LUXURY & FASHION ====================
+  {
+    id: "lux_velvet_serif",
+    name: "Velvet Serif Reveal",
+    category: "luxury",
+    tags: ["luxury", "fashion", "serif", "editorial", "vogue", "slow"],
+    sampleText: "VELVET",
+    defaultDuration: 1.35,
+    defaultStagger: 20,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "velvet-serif", unit: "whole", ease: "cubic" },
+    ae: {
+      ease: "cubic",
+      centerPivot: true,
+      props: { tracking: 45, scale: [106, 106], opacity: 0 }
+    }
+  },
+  {
+    id: "lux_3d_whisper",
+    name: "Editorial 3D Whisper",
+    category: "luxury",
+    tags: ["luxury", "3d", "subtle", "blur", "fashion", "clean"],
+    sampleText: "ATELIER",
+    defaultDuration: 1.2,
+    defaultStagger: 45,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "3d-whisper", unit: "chars", ease: "expo" },
+    ae: {
+      perChar3D: true,
+      ease: "expo",
+      centerPivot: true,
+      props: { rotationY: 28, blur: [14, 14], opacity: 0 }
+    }
+  },
+  {
+    id: "lux_silk_curtain",
+    name: "Silk Curtain Mask",
+    category: "luxury",
+    tags: ["luxury", "mask", "curtain", "fashion", "smooth", "title"],
+    sampleText: "MAISON",
+    defaultDuration: 1.1,
+    defaultStagger: 30,
+    defaultOvershoot: 0,
+    defaultBasedOn: "words",
+    preview: { mode: "silk-curtain", unit: "words", ease: "expo" },
+    ae: {
+      mask: true,
+      ease: "expo",
+      centerPivot: true,
+      props: { position: [0, 85], scale: [108, 108] }
+    }
+  },
+  {
+    id: "lux_horizon_line",
+    name: "Horizon Line Reveal",
+    category: "luxury",
+    tags: ["luxury", "line", "horizon", "minimal", "mask", "editorial"],
+    sampleText: "HORIZON",
+    defaultDuration: 1.0,
+    defaultStagger: 25,
+    defaultOvershoot: 0,
+    defaultBasedOn: "words",
+    preview: { mode: "horizon-line", unit: "whole", ease: "expo" },
+    ae: {
+      mask: true,
+      ease: "expo",
+      bgShape: "horizon",
+      bgColor: [0.95, 0.95, 0.95, 1],
+      props: { position: [0, 72] }
+    }
+  },
+
+  // ==================== 18. KINETIC POSTER ====================
+  {
+    id: "kin_staircase",
+    name: "Staircase Interleave",
+    category: "kinetic",
+    tags: ["kinetic", "poster", "alternating", "vertical", "swiss"],
+    sampleText: "STAIRS",
+    defaultDuration: 0.85,
+    defaultStagger: 45,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "staircase", unit: "chars", ease: "expo" },
+    ae: {
+      ease: "expo",
+      alternating: true,
+      props: { position: [0, 95] }
+    }
+  },
+  {
+    id: "kin_accordion",
+    name: "Accordion Snap",
+    category: "kinetic",
+    tags: ["kinetic", "expand", "compress", "tracking", "poster"],
+    sampleText: "ACCORDION",
+    defaultDuration: 0.85,
+    defaultStagger: 25,
+    defaultOvershoot: 30,
+    defaultBasedOn: "words",
+    preview: { mode: "accordion", unit: "whole", ease: "back" },
+    ae: {
+      ease: "back",
+      centerPivot: true,
+      props: { scale: [40, 100], tracking: -40, opacity: 0 }
+    }
+  },
+  {
+    id: "kin_pendulum",
+    name: "Pendulum Swing",
+    category: "kinetic",
+    tags: ["kinetic", "swing", "rotate", "elastic", "playful"],
+    sampleText: "SWING",
+    defaultDuration: 1.05,
+    defaultStagger: 45,
+    defaultOvershoot: 45,
+    defaultBasedOn: "chars",
+    preview: { mode: "pendulum", unit: "chars", ease: "elastic" },
+    ae: {
+      ease: "elastic",
+      centerPivot: true,
+      props: { rotation: 38, opacity: 0 }
+    }
+  },
+  {
+    id: "kin_domino_3d",
+    name: "Domino 3D Cascade",
+    category: "kinetic",
+    tags: ["kinetic", "3d", "domino", "cascade", "poster", "flip"],
+    sampleText: "DOMINO",
+    defaultDuration: 0.9,
+    defaultStagger: 75,
+    defaultOvershoot: 25,
+    defaultBasedOn: "chars",
+    preview: { mode: "flip-x", unit: "chars", ease: "back" },
+    ae: {
+      perChar3D: true,
+      ease: "back",
+      centerPivot: true,
+      props: { rotationX: -85, position3D: [0, -35, 40], opacity: 0 }
+    }
+  },
+
+  // ==================== 19. MORE CONTINUOUS LOOPS & FX ====================
+  {
+    id: "loop_broken_neon",
+    name: "Broken Neon Flicker",
+    category: "loops",
+    isLoop: true,
+    tags: ["loop", "fx", "neon", "flicker", "broken", "sign", "retro"],
+    sampleText: "NEON",
+    defaultDuration: 1.2,
+    defaultStagger: 0,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "loop-neon-flicker", unit: "chars", ease: "linear" },
+    ae: {
+      loopMode: "neonFlicker",
+      loopSpeed: 12,
+      loopIntensity: 100,
+      fxEffect: "crtGlow",
+      props: { opacity: 0 }
+    }
+  },
+  {
+    id: "loop_shimmer_sweep",
+    name: "Shimmer Sweep",
+    category: "loops",
+    isLoop: true,
+    tags: ["loop", "fx", "shimmer", "glint", "luxury", "wave"],
+    sampleText: "SHIMMER",
+    defaultDuration: 1.6,
+    defaultStagger: 0,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "loop-shimmer", unit: "chars", ease: "linear" },
+    ae: {
+      loopMode: "shimmer",
+      loopSpeed: 1.4,
+      loopIntensity: 100,
+      centerPivot: true,
+      fxEffect: "crtGlow",
+      props: { scale: [112, 112], blur: [4, 0] }
+    }
+  },
+  {
+    id: "loop_scale_ripple",
+    name: "Kinetic Scale Ripple",
+    category: "loops",
+    isLoop: true,
+    tags: ["loop", "fx", "ripple", "stretch", "poster", "kinetic"],
+    sampleText: "RIPPLE",
+    defaultDuration: 1.4,
+    defaultStagger: 0,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "loop-ripple", unit: "chars", ease: "linear" },
+    ae: {
+      loopMode: "ripple",
+      loopSpeed: 2.2,
+      loopIntensity: 100,
+      centerPivot: true,
+      props: { scale: [100, 128] }
+    }
+  },
+  {
+    id: "loop_3d_sway",
+    name: "3D Float Sway",
+    category: "loops",
+    isLoop: true,
+    tags: ["loop", "fx", "3d", "sway", "float", "subtle"],
+    sampleText: "SWAY 3D",
+    defaultDuration: 1.8,
+    defaultStagger: 0,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "loop-3d-sway", unit: "chars", ease: "linear" },
+    ae: {
+      perChar3D: true,
+      loopMode: "wave",
+      loopSpeed: 1.4,
+      loopIntensity: 100,
+      centerPivot: true,
+      props: { rotationY: 22, position3D: [0, 10, 0] }
+    }
+  },
+  {
+    id: "loop_impact_rumble",
+    name: "Impact Rumble",
+    category: "loops",
+    isLoop: true,
+    tags: ["loop", "fx", "shake", "rumble", "bass", "gaming", "hype"],
+    sampleText: "RUMBLE",
+    defaultDuration: 1.0,
+    defaultStagger: 0,
+    defaultOvershoot: 0,
+    defaultBasedOn: "all",
+    preview: { mode: "loop-rumble", unit: "whole", ease: "linear" },
+    ae: {
+      loopMode: "rumble",
+      loopSpeed: 24,
+      loopIntensity: 100,
+      centerPivot: true,
+      props: { position: [8, 8], rotation: 2.5 }
+    }
+  },
+  {
+    id: "loop_gentle_pendulum",
+    name: "Gentle Pendulum",
+    category: "loops",
+    isLoop: true,
+    tags: ["loop", "fx", "pendulum", "rock", "rotate", "smooth"],
+    sampleText: "ROCKING",
+    defaultDuration: 1.6,
+    defaultStagger: 0,
+    defaultOvershoot: 0,
+    defaultBasedOn: "words",
+    preview: { mode: "loop-pendulum", unit: "words", ease: "linear" },
+    ae: {
+      loopMode: "wave",
+      loopSpeed: 1.2,
+      loopIntensity: 100,
+      centerPivot: true,
+      props: { rotation: 8 }
     }
   }
 ];
