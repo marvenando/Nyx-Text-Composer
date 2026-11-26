@@ -331,24 +331,34 @@ function tc_ensureBgShape(comp, layer, shapeType, bgColor, direction) {
         grpPos.setValue([0, 0]);
         grpScale.setValue([100, 100]);
     } else if (shapeType === "wipeBlock") {
-        // Swiss Block Wipe: expands L->R on first half, retracts L->R on second half
+        // Swiss Block Wipe: expands L->R on first half, retracts L->R on second half (supports IN, OUT, BOTH)
         var wbHead = [
             "var p = thisLayer.parent;",
             "var midT = p.inPoint + Math.max(0.01, (p.outPoint - p.inPoint) * 0.5);",
             "var r = p.sourceRectAtTime(midT, false);",
             'var padX = effect("' + TC_PREFIX_BG + ' Pad X")("Slider");',
             'var padY = effect("' + TC_PREFIX_BG + ' Pad Y")("Slider");',
-            'var dIn = 0.8; try { dIn = Math.max(0.1, p.effect("' + TC_PREFIX_IN + ' Duration (s)")("Slider")); } catch(e) {}',
-            'try { dIn = Math.max(0.1, p.marker.key("In").time - p.inPoint); } catch(e) {}',
-            "var t = clamp((time - p.inPoint) / dIn, 0, 1);",
             "var fullW = r.width + padX * 2;",
             "var leftX = r.left - padX;",
-            "var easeA = t < 0.5 ? (1 - Math.pow(2, -10 * (t * 2))) : 1;",
-            "var easeB = t > 0.5 ? (1 - Math.pow(2, -10 * ((t - 0.5) * 2))) : 0;",
-            "var x0 = leftX + fullW * easeB;",
-            "var x1 = leftX + fullW * easeA;",
-            "var w = (t <= 0 || t >= 1) ? 0 : Math.max(0, x1 - x0);"
+            "var t = 0;"
         ];
+        if (useIn) {
+            wbHead.push('var dIn = 0.8; try { dIn = Math.max(0.1, p.effect("' + TC_PREFIX_IN + ' Duration (s)")("Slider")); } catch(e) {}');
+            wbHead.push('try { dIn = Math.max(0.1, p.marker.key("In").time - p.inPoint); } catch(e) {}');
+            wbHead.push("var tIn = clamp((time - p.inPoint) / dIn, 0, 1);");
+            wbHead.push("if (tIn > 0 && tIn < 1) t = tIn;");
+        }
+        if (useOut) {
+            wbHead.push('var dOut = 0.8; try { dOut = Math.max(0.1, p.effect("' + TC_PREFIX_OUT + ' Duration (s)")("Slider")); } catch(e) {}');
+            wbHead.push('try { dOut = Math.max(0.1, p.outPoint - p.marker.key("Out").time); } catch(e) {}');
+            wbHead.push("var tOut = clamp((time - (p.outPoint - dOut)) / dOut, 0, 1);");
+            wbHead.push("if (tOut > 0 && tOut < 1) t = tOut;");
+        }
+        wbHead.push("var easeA = t < 0.5 ? (1 - Math.pow(2, -10 * (t * 2))) : 1;");
+        wbHead.push("var easeB = t > 0.5 ? (1 - Math.pow(2, -10 * ((t - 0.5) * 2))) : 0;");
+        wbHead.push("var x0 = leftX + fullW * easeB;");
+        wbHead.push("var x1 = leftX + fullW * easeA;");
+        wbHead.push("var w = (t <= 0 || t >= 1) ? 0 : Math.max(0, x1 - x0);");
         rectSize.expression = wbHead.concat(["[w, r.height + padY * 2];"]).join("\n");
         rectPos.expression = wbHead.concat(["[x0 + w * 0.5, r.top + r.height * 0.5];"]).join("\n");
         grpPos.setValue([0, 0]);
@@ -374,6 +384,12 @@ function tc_ensureBgShape(comp, layer, shapeType, bgColor, direction) {
             "[s * 100, (0.65 + 0.35 * s) * 100];"
         ]).join("\n");
     }
+
+    // Keep the Text Layer selected instead of the newly created shape layer
+    try {
+        shape.selected = false;
+        layer.selected = true;
+    } catch (e) {}
 }
 
 // ==================== NATIVE LAYER EFFECTS (INK, HOLOGRAM, CRT, SHADOW) ====================
@@ -915,11 +931,11 @@ function tc_applyTerminal(layer, cfg) {
         'var dur = Math.max(0.05, effect("' + TC_PREFIX_TERM + ' Duration (s)")("Slider"));',
         'try { dur = Math.max(0.05, marker.key("In").time - inPoint); } catch (e) {}',
         'var blinkHz = Math.max(0.2, effect("' + TC_PREFIX_TERM + ' Blink Speed (Hz)")("Slider"));',
-        "var full = value;",
+        "var full = String(value);",
         "var t = clamp((time - inPoint) / dur, 0, 1);",
         "var count = Math.floor(t * full.length);",
         "var showCur = (Math.floor((time - inPoint) * blinkHz * 2) % 2) == 0;",
-        'full.substr(0, count) + (showCur ? "' + cursor + '" : " ");'
+        'full.slice(0, count) + (showCur ? "' + cursor + '" : " ");'
     ].join("\n");
 
     srcProp.expression = expr;
@@ -965,6 +981,8 @@ function TextComposer_applyPreset(jsonStr) {
                 tc_applyLoopFX(layer, cfg);
                 if (ae.fxEffect) {
                     tc_applyLayerEffect(layer, ae.fxEffect);
+                } else {
+                    tc_removeByPrefix(layer, TC_PREFIX_EFX);
                 }
             } else if (cfg.direction === "counter") {
                 tc_applyCounter(layer, cfg);
@@ -979,12 +997,18 @@ function TextComposer_applyPreset(jsonStr) {
                 }
                 if (ae.bgShape) {
                     tc_ensureBgShape(comp, layer, ae.bgShape, ae.bgColor, cfg.direction);
+                } else {
+                    tc_removeLinkedBg(comp, layer);
                 }
                 if (ae.rgbHit) {
                     tc_applyRgbHit(layer, cfg.direction);
+                } else {
+                    tc_removeByPrefix(layer, TC_PREFIX_RGB);
                 }
                 if (ae.fxEffect) {
                     tc_applyLayerEffect(layer, ae.fxEffect);
+                } else {
+                    tc_removeByPrefix(layer, TC_PREFIX_EFX);
                 }
             }
         }
