@@ -1526,7 +1526,7 @@ window.TEXT_COMPOSER_PRESETS = [
       ease: "impact",
       centerPivot: true,
       rgbHit: true,
-      fxEffect: "rottingInk",
+      fxEffect: "jumpscarePulse",
       props: { scale: [260, 260], rotation: -12, tracking: 55, blur: [48, 22], opacity: 0 }
     }
   },

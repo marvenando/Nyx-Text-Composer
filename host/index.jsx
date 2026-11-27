@@ -264,8 +264,12 @@ function tc_ensureBgShape(comp, layer, shapeType, bgColor, direction) {
     tc_addColor(effects, TC_PREFIX_BG + " Color", bgColor || [0.90, 0.34, 0.28, 1]);
     var defPadX = (shapeType === "underline" || shapeType === "horizon") ? 4 : (shapeType === "box" ? 36 : 26);
     var defPadY = shapeType === "horizon" ? 2 : (shapeType === "underline" ? 4 : (shapeType === "box" ? 18 : 14));
+    var defRound = (shapeType === "box" || shapeType === "highlighter") ? 6 : (shapeType === "wipeBlock" ? 0 : 2);
     tc_addSlider(effects, TC_PREFIX_BG + " Pad X", defPadX);
     tc_addSlider(effects, TC_PREFIX_BG + " Pad Y", defPadY);
+    if (shapeType !== "brackets") {
+        tc_addSlider(effects, TC_PREFIX_BG + " Roundness", defRound);
+    }
 
     var contents = shape.property("ADBE Root Vectors Group");
     var grp = contents.addProperty("ADBE Vector Group");
@@ -353,15 +357,7 @@ function tc_ensureBgShape(comp, layer, shapeType, bgColor, direction) {
     var rect = grpContents.property("ADBE Vector Shape - Rect");
     var fill = grpContents.property("ADBE Vector Graphic - Fill");
     fill.property("ADBE Vector Fill Color").expression = 'effect("' + TC_PREFIX_BG + ' Color")("Color")';
-    if (shapeType === "box") {
-        rect.property("ADBE Vector Rect Roundness").setValue(6);
-    } else if (shapeType === "highlighter") {
-        rect.property("ADBE Vector Rect Roundness").setValue(6);
-    } else if (shapeType === "wipeBlock") {
-        rect.property("ADBE Vector Rect Roundness").setValue(0);
-    } else {
-        rect.property("ADBE Vector Rect Roundness").setValue(2);
-    }
+    rect.property("ADBE Vector Rect Roundness").expression = 'Math.max(0, effect("' + TC_PREFIX_BG + ' Roundness")("Slider"));';
 
     var rectSize = rect.property("ADBE Vector Rect Size");
     var rectPos = rect.property("ADBE Vector Rect Position");
@@ -457,7 +453,7 @@ function tc_ensureBgShape(comp, layer, shapeType, bgColor, direction) {
 }
 
 // ==================== NATIVE LAYER EFFECTS (INK, HOLOGRAM, CRT, SHADOW) ====================
-function tc_applyLayerEffect(layer, fxType) {
+function tc_applyLayerEffect(layer, fxType, direction) {
     tc_removeByPrefix(layer, TC_PREFIX_EFX);
     var effects = layer.property("ADBE Effect Parade");
     if (!effects) return;
@@ -540,6 +536,38 @@ function tc_applyLayerEffect(layer, fxType) {
                 try { (vhsCyan.property("Direction") || vhsCyan.property(3)).setValue(90); } catch (e) {}
                 try { (vhsCyan.property("Distance") || vhsCyan.property(4)).setValue(bleedDist); } catch (e) {}
                 try { (vhsCyan.property("Softness") || vhsCyan.property(5)).setValue(4); } catch (e) {}
+            }
+        } else if (fxType === "jumpscarePulse") {
+            // Brief violent Roughen Edges + Blood Aura ONLY during In/Out impact, settles cleanly to 0
+            var useIn = (!direction || direction === "in" || direction === "both");
+            var useOut = (direction === "out" || direction === "both");
+            var pLines = ["var p = 0;"];
+            if (useIn) {
+                pLines.push('var dIn = 0.42; try { dIn = Math.max(0.05, effect("' + TC_PREFIX_IN + ' Duration (s)")("Slider")); } catch(e) {}');
+                pLines.push('try { dIn = Math.max(0.05, marker.key("In").time - inPoint); } catch(e) {}');
+                pLines.push("var tIn = clamp((time - inPoint) / dIn, 0, 1);");
+                pLines.push("if (tIn > 0 && tIn < 0.92) p = Math.max(p, Math.exp(-5.5 * tIn));");
+            }
+            if (useOut) {
+                pLines.push('var dOut = 0.42; try { dOut = Math.max(0.05, effect("' + TC_PREFIX_OUT + ' Duration (s)")("Slider")); } catch(e) {}');
+                pLines.push('try { dOut = Math.max(0.05, outPoint - marker.key("Out").time); } catch(e) {}');
+                pLines.push("var tOut = clamp((time - (outPoint - dOut)) / dOut, 0, 1);");
+                pLines.push("if (tOut > 0.08 && tOut < 1) p = Math.max(p, Math.exp(-5.5 * (1 - tOut)));");
+            }
+            if (effects.canAddProperty("ADBE Roughen Edges")) {
+                var jr = effects.addProperty("ADBE Roughen Edges");
+                jr.name = TC_PREFIX_EFX + " Jumpscare Tear";
+                try { (jr.property("Border") || jr.property("ADBE Roughen Edges-0002")).expression = pLines.concat(["p * 7;"]).join("\n"); } catch (e) {}
+                try { (jr.property("Scale") || jr.property("ADBE Roughen Edges-0005")).setValue(24); } catch (e) {}
+                try { (jr.property("Evolution") || jr.property("ADBE Roughen Edges-0009")).expression = "posterizeTime(14);\ntime * 220;"; } catch (e) {}
+            }
+            if (effects.canAddProperty("ADBE Drop Shadow")) {
+                var ja = effects.addProperty("ADBE Drop Shadow");
+                ja.name = TC_PREFIX_EFX + " Jumpscare Flash";
+                try { (ja.property("Shadow Color") || ja.property(1)).setValue([0.85, 0.06, 0.12, 1]); } catch (e) {}
+                try { (ja.property("Opacity") || ja.property(2)).expression = pLines.concat(["p * 220;"]).join("\n"); } catch (e) {}
+                try { (ja.property("Distance") || ja.property(4)).setValue(0); } catch (e) {}
+                try { (ja.property("Softness") || ja.property(5)).setValue(18); } catch (e) {}
             }
         } else if (fxType === "rottingInk") {
             if (effects.canAddProperty("ADBE Roughen Edges")) {
@@ -1188,7 +1216,7 @@ function TextComposer_applyPreset(jsonStr) {
             if (cfg.direction === "fx") {
                 tc_applyLoopFX(comp, layer, cfg);
                 if (ae.fxEffect) {
-                    tc_applyLayerEffect(layer, ae.fxEffect);
+                    tc_applyLayerEffect(layer, ae.fxEffect, cfg.direction);
                 } else {
                     tc_removeByPrefix(layer, TC_PREFIX_EFX);
                 }
@@ -1214,7 +1242,7 @@ function TextComposer_applyPreset(jsonStr) {
                     tc_removeByPrefix(layer, TC_PREFIX_RGB);
                 }
                 if (ae.fxEffect) {
-                    tc_applyLayerEffect(layer, ae.fxEffect);
+                    tc_applyLayerEffect(layer, ae.fxEffect, cfg.direction);
                 } else {
                     tc_removeByPrefix(layer, TC_PREFIX_EFX);
                 }
