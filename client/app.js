@@ -560,6 +560,75 @@
         transform = "rotate(" + pr.toFixed(1) + "deg)";
         opacity = 1;
         break;
+      // ---- NEW PACK 12: HORROR & THRILLER ----
+      case "creeping-dread":
+        var scDread = 0.88 + 0.12 * clamp01(p);
+        letterSpacing = (0.04 + clamp01(p) * 0.14).toFixed(3) + "em";
+        transform = "scale(" + scDread.toFixed(3) + ")";
+        filter = inv > 0.04 ? "blur(" + (inv * 6).toFixed(1) + "px)" : "none";
+        opacity = clamp01(p);
+        break;
+      case "possessed-twitch":
+        var twStep = Math.floor(nowMs / 65);
+        var tx = inv > 0.03 ? Math.sin(twStep * 17.3 + unitIdx * 9) * 8 * inv : 0;
+        var ty = inv > 0.03 ? Math.cos(twStep * 13.7 + unitIdx * 5) * 9 * inv : 0;
+        var tr = inv > 0.03 ? Math.sin(twStep * 11.1 + unitIdx * 7) * 16 * inv : 0;
+        transform = "translate3d(" + tx.toFixed(1) + "px," + ty.toFixed(1) + "px,0) rotate(" + tr.toFixed(1) + "deg)";
+        opacity = p > 0.08 ? 1 : 0;
+        break;
+      case "rotting-ink":
+        var rk = Math.sin(Math.floor(nowMs / 90) * 11 + unitIdx * 3) * 0.6;
+        filter = "blur(" + (0.4 + inv * 4.5).toFixed(1) + "px)";
+        transform = "translate3d(" + rk.toFixed(1) + "px,0,0)";
+        el.style.textShadow = "0 0 4px rgba(180,30,30,0.45)";
+        opacity = clamp01(p);
+        break;
+      case "analog-alert":
+        var aStep = Math.floor(nowMs / 120);
+        var ax = Math.sin(aStep * 15 + unitIdx * 4) * 2.2;
+        transform = "translate3d(" + ax.toFixed(1) + "px,0,0)";
+        el.style.textShadow = "1.5px 0 rgba(255,40,70,0.5), -1.5px 0 rgba(60,220,255,0.5)";
+        opacity = p >= 0.5 ? 0.92 : 0;
+        break;
+      case "ghostly-fog":
+        filter = inv > 0.02 ? "blur(" + (inv * 10).toFixed(1) + "px)" : "none";
+        letterSpacing = (0.06 + inv * 0.25).toFixed(3) + "em";
+        opacity = clamp01(p * 0.95);
+        break;
+      case "jumpscare-slam":
+        var scJump = 1 + (1 - p) * 1.3;
+        var jShake = p < 0.85 ? (Math.sin(nowMs * 0.14) * (1 - clamp01(p)) * 6) : 0;
+        transform = "scale(" + Math.max(0.85, scJump).toFixed(3) + ") translate3d(" + jShake.toFixed(1) + "px,0,0)";
+        el.style.textShadow = p < 0.8 ? "4px 0 #dc143c, -4px 0 #00e5ff" : "none";
+        filter = inv > 0.05 ? "blur(" + (Math.abs(inv) * 6).toFixed(1) + "px)" : "none";
+        opacity = p > 0.02 ? 1 : 0;
+        break;
+      case "loop-creep":
+        var scCreep = 1 + ((nowMs % 2400) / 2400) * 0.14;
+        transform = "scale(" + scCreep.toFixed(3) + ")";
+        opacity = 1;
+        break;
+      case "loop-convulse":
+        var cStep = Math.floor(nowMs / 95);
+        var cx = Math.sin(cStep * 23.1 + unitIdx * 7.3) * 3.5;
+        var cy = Math.cos(cStep * 19.7 + unitIdx * 5.1) * 4.0;
+        var cr = Math.sin(cStep * 13.3 + unitIdx * 3.7) * 9;
+        transform = "translate3d(" + cx.toFixed(1) + "px," + cy.toFixed(1) + "px,0) rotate(" + cr.toFixed(1) + "deg)";
+        opacity = 1;
+        break;
+      case "loop-boiling":
+        var bStep = Math.floor(nowMs / 125);
+        var bx = Math.sin(bStep * 17 + unitIdx * 6) * 1.8;
+        var by = Math.cos(bStep * 13 + unitIdx * 4) * 1.8;
+        transform = "translate3d(" + bx.toFixed(1) + "px," + by.toFixed(1) + "px,0) skewX(" + (bx * 1.5).toFixed(1) + "deg)";
+        filter = "blur(0.5px)";
+        opacity = 1;
+        break;
+      case "loop-fluorescent":
+        var fl = Math.sin(nowMs * 0.045) + Math.sin(nowMs * 0.117) * 0.7;
+        opacity = fl < -1.05 ? 0.12 : 0.95;
+        el.style.textShadow = opacity > 0.5 ? "0 0 8px rgba(210,235,255,0.55)" : "none";
+        break;
       default:
         opacity = clamp01(p);
     }

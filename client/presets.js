@@ -22,7 +22,8 @@ window.TEXT_COMPOSER_CATEGORIES = [
   { id: "anime", label: "Anime & Impact" },
   { id: "retro", label: "Retro & VHS" },
   { id: "luxury", label: "Luxury & Fashion" },
-  { id: "kinetic", label: "Kinetic Poster" }
+  { id: "kinetic", label: "Kinetic Poster" },
+  { id: "horror", label: "Horror & Thriller" }
 ];
 
 window.TEXT_COMPOSER_PRESETS = [
@@ -1417,6 +1418,196 @@ window.TEXT_COMPOSER_PRESETS = [
       loopIntensity: 100,
       centerPivot: true,
       props: { rotation: 8 }
+    }
+  },
+
+  // ==================== 20. HORROR & THRILLER ====================
+  {
+    id: "hor_creeping_dread",
+    name: "Creeping Dread Zoom",
+    category: "horror",
+    tags: ["horror", "thriller", "a24", "dread", "slow", "zoom", "scary"],
+    sampleText: "DREAD",
+    defaultDuration: 1.8,
+    defaultStagger: 0,
+    defaultOvershoot: 0,
+    defaultBasedOn: "all",
+    preview: { mode: "creeping-dread", unit: "whole", ease: "cubic" },
+    ae: {
+      ease: "cubic",
+      centerPivot: true,
+      props: { scale: [90, 90], tracking: -20, blur: [16, 16], opacity: 0 }
+    }
+  },
+  {
+    id: "hor_possessed_twitch",
+    name: "Possessed Twitch",
+    category: "horror",
+    tags: ["horror", "twitch", "creepy", "possessed", "se7en", "scary"],
+    sampleText: "TWITCH",
+    defaultDuration: 0.9,
+    defaultStagger: 65,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "possessed-twitch", unit: "chars", ease: "glitch" },
+    ae: {
+      ease: "glitch",
+      randomOrder: true,
+      centerPivot: true,
+      props: { position: [18, -22], rotation: 16, opacity: 0 }
+    }
+  },
+  {
+    id: "hor_rotting_ink",
+    name: "Rotting Ink Decay",
+    category: "horror",
+    tags: ["horror", "decay", "rot", "ink", "rough", "eerie", "dark"],
+    sampleText: "DECAY",
+    defaultDuration: 1.2,
+    defaultStagger: 55,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "rotting-ink", unit: "chars", ease: "cubic" },
+    ae: {
+      ease: "cubic",
+      randomOrder: true,
+      fxEffect: "rottingInk",
+      props: { blur: [12, 12], opacity: 0 }
+    }
+  },
+  {
+    id: "hor_analog_alert",
+    name: "Analog Horror Alert",
+    category: "horror",
+    tags: ["horror", "analog", "cctv", "vhs", "found-footage", "eerie"],
+    sampleText: "DO NOT LOOK",
+    defaultDuration: 1.0,
+    defaultStagger: 55,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "analog-alert", unit: "chars", ease: "flicker" },
+    ae: {
+      ease: "flicker",
+      randomOrder: true,
+      fxEffect: "analogHorror",
+      props: { blur: [8, 0], opacity: 0 }
+    }
+  },
+  {
+    id: "hor_ghostly_fog",
+    name: "Ghostly Fog Fade",
+    category: "horror",
+    tags: ["horror", "ghost", "fog", "mist", "haunted", "blur", "slow"],
+    sampleText: "HAUNTED",
+    defaultDuration: 1.7,
+    defaultStagger: 70,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "ghostly-fog", unit: "chars", ease: "cubic" },
+    ae: {
+      ease: "cubic",
+      randomOrder: true,
+      props: { blur: [48, 22], tracking: 35, opacity: 0 }
+    }
+  },
+  {
+    id: "hor_jumpscare_slam",
+    name: "Jumpscare Slam",
+    category: "horror",
+    tags: ["horror", "jumpscare", "slam", "trailer", "impact", "scary"],
+    sampleText: "RUN",
+    defaultDuration: 0.45,
+    defaultStagger: 10,
+    defaultOvershoot: 45,
+    defaultBasedOn: "words",
+    preview: { mode: "jumpscare-slam", unit: "words", ease: "impact" },
+    ae: {
+      ease: "impact",
+      centerPivot: true,
+      rgbHit: true,
+      props: { scale: [240, 240], blur: [42, 18], opacity: 0 }
+    }
+  },
+
+  // ==================== 21. HORROR LOOPS & FX ====================
+  {
+    id: "loop_ominous_creep",
+    name: "Ominous Slow Creep",
+    category: "loops",
+    isLoop: true,
+    tags: ["loop", "fx", "horror", "thriller", "zoom", "creep", "tension"],
+    sampleText: "CLOSER",
+    defaultDuration: 2.0,
+    defaultStagger: 0,
+    defaultOvershoot: 0,
+    defaultBasedOn: "all",
+    preview: { mode: "loop-creep", unit: "whole", ease: "linear" },
+    ae: {
+      loopMode: "drift",
+      loopSpeed: 1.0,
+      loopIntensity: 100,
+      centerPivot: true,
+      props: { scale: [112, 112] }
+    }
+  },
+  {
+    id: "loop_haunted_convulse",
+    name: "Haunted Letter Convulse",
+    category: "loops",
+    isLoop: true,
+    tags: ["loop", "fx", "horror", "convulse", "jitter", "twitch", "creepy"],
+    sampleText: "CURSED",
+    defaultDuration: 1.2,
+    defaultStagger: 0,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "loop-convulse", unit: "chars", ease: "linear" },
+    ae: {
+      loopMode: "convulse",
+      loopSpeed: 10,
+      loopIntensity: 100,
+      centerPivot: true,
+      props: { position: [9, 11], rotation: 9 }
+    }
+  },
+  {
+    id: "loop_boiling_decay",
+    name: "Boiling Decay Edges",
+    category: "loops",
+    isLoop: true,
+    tags: ["loop", "fx", "horror", "boil", "decay", "analog", "cursed"],
+    sampleText: "ROTTING",
+    defaultDuration: 1.4,
+    defaultStagger: 0,
+    defaultOvershoot: 0,
+    defaultBasedOn: "chars",
+    preview: { mode: "loop-boiling", unit: "chars", ease: "linear" },
+    ae: {
+      loopMode: "wiggle",
+      loopSpeed: 8,
+      loopIntensity: 45,
+      fxEffect: "boilingDecay",
+      props: { position: [3, 3] }
+    }
+  },
+  {
+    id: "loop_dying_fluorescent",
+    name: "Dying Fluorescent",
+    category: "loops",
+    isLoop: true,
+    tags: ["loop", "fx", "horror", "flicker", "light", "hallway", "eerie"],
+    sampleText: "EXIT",
+    defaultDuration: 1.4,
+    defaultStagger: 0,
+    defaultOvershoot: 0,
+    defaultBasedOn: "all",
+    preview: { mode: "loop-fluorescent", unit: "whole", ease: "linear" },
+    ae: {
+      loopMode: "fluorescent",
+      loopSpeed: 14,
+      loopIntensity: 100,
+      fxEffect: "crtGlow",
+      props: { opacity: 0 }
     }
   }
 ];

@@ -541,6 +541,36 @@ function tc_applyLayerEffect(layer, fxType) {
                 try { (vhsCyan.property("Distance") || vhsCyan.property(4)).setValue(bleedDist); } catch (e) {}
                 try { (vhsCyan.property("Softness") || vhsCyan.property(5)).setValue(4); } catch (e) {}
             }
+        } else if (fxType === "rottingInk" && effects.canAddProperty("ADBE Roughen Edges")) {
+            var rot = effects.addProperty("ADBE Roughen Edges");
+            rot.name = TC_PREFIX_EFX + " Rotting Edges";
+            try { (rot.property("Border") || rot.property("ADBE Roughen Edges-0002")).setValue(4.5); } catch (e) {}
+            try { (rot.property("Edge Sharpness") || rot.property("ADBE Roughen Edges-0003")).setValue(1.2); } catch (e) {}
+            try { (rot.property("Fractal Influence") || rot.property("ADBE Roughen Edges-0004")).setValue(1.8); } catch (e) {}
+            try { (rot.property("Scale") || rot.property("ADBE Roughen Edges-0005")).setValue(26); } catch (e) {}
+            try { (rot.property("Evolution") || rot.property("ADBE Roughen Edges-0008")).expression = "posterizeTime(12);\ntime * 180;"; } catch (e) {}
+        } else if (fxType === "analogHorror" || fxType === "boilingDecay") {
+            if (effects.canAddProperty("ADBE Turbulent Displace")) {
+                var td = effects.addProperty("ADBE Turbulent Displace");
+                td.name = TC_PREFIX_EFX + " Analog Displace";
+                try { (td.property("Amount") || td.property(2)).setValue(fxType === "boilingDecay" ? 14 : 11); } catch (e) {}
+                try { (td.property("Size") || td.property(3)).setValue(fxType === "boilingDecay" ? 16 : 18); } catch (e) {}
+                try { (td.property("Evolution") || td.property(6)).expression = "posterizeTime(8);\ntime * 150;"; } catch (e) {}
+            }
+            if (fxType === "analogHorror" && effects.canAddProperty("ADBE Venetian Blinds")) {
+                var aScan = effects.addProperty("ADBE Venetian Blinds");
+                aScan.name = TC_PREFIX_EFX + " CCTV Scanlines";
+                try { aScan.property("ADBE Venetian Blinds-0001").setValue(20); } catch (e) {}
+                try { aScan.property("ADBE Venetian Blinds-0002").setValue(90); } catch (e) {}
+                try { aScan.property("ADBE Venetian Blinds-0003").setValue(4); } catch (e) {}
+            }
+            if (fxType === "boilingDecay" && effects.canAddProperty("ADBE Roughen Edges")) {
+                var bd = effects.addProperty("ADBE Roughen Edges");
+                bd.name = TC_PREFIX_EFX + " Decay Edges";
+                try { (bd.property("Border") || bd.property("ADBE Roughen Edges-0002")).setValue(3.5); } catch (e) {}
+                try { (bd.property("Scale") || bd.property("ADBE Roughen Edges-0005")).setValue(28); } catch (e) {}
+                try { (bd.property("Evolution") || bd.property("ADBE Roughen Edges-0008")).expression = "posterizeTime(8);\ntime * 140;"; } catch (e) {}
+            }
         }
     } catch (e) {}
 }
@@ -968,6 +998,13 @@ function tc_applyLoopFX(comp, layer, cfg) {
         lines.push("((Math.sin(time * spd * 3.14159 + idx * 0.7) + 1) * 0.5) * inten;");
     } else if (mode === "rumble") {
         lines.push("Math.sin(time * spd * 3.7) * Math.cos(time * spd * 2.3) * inten;");
+    } else if (mode === "convulse") {
+        lines.push("var stepT = Math.floor(time * spd);");
+        lines.push("var spike = Math.sin((idx + 1) * 23.1 + stepT * 17.3) * Math.cos((idx + 1) * 11.7 + stepT * 9.1);");
+        lines.push("spike * inten;");
+    } else if (mode === "fluorescent") {
+        lines.push("var fl = Math.sin(time * spd * 2.7) + Math.sin(time * spd * 6.9) * 0.7;");
+        lines.push("(fl < -1.05 ? 0.88 : 0) * inten;");
     } else {
         lines.push("Math.sin(time * spd * 3.14159) * inten;");
     }
