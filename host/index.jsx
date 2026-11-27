@@ -215,8 +215,8 @@ function tc_ensureMask(layer) {
     var maskExpr = [
         "var midT = inPoint + Math.max(0.01, (outPoint - inPoint) * 0.5);",
         "var r = sourceRectAtTime(midT, false);",
-        "var padX = 28;",
-        "var padY = 12;",
+        "var padX = 20;",
+        "var padY = 8;",
         "var l = r.left - padX;",
         "var t = r.top - padY;",
         "var ri = r.left + r.width + padX;",
@@ -784,13 +784,25 @@ function tc_buildSelectorExpression(prefix, isOut, easeType, randomOrder, center
     return lines.join("\n");
 }
 
-function tc_populateAnimatorProps(animProps, props, prefix) {
+function tc_populateAnimatorProps(animProps, props, prefix, isMasked) {
     if (props.position3D) {
         var p3 = animProps.addProperty("ADBE Text Position 3D");
         p3.setValue(props.position3D);
     } else if (props.position) {
         var p2 = animProps.addProperty("ADBE Text Position 3D");
         p2.setValue([props.position[0], props.position[1]]);
+        if (isMasked) {
+            // Dynamic offset from sourceRectAtTime so text is 100% hidden outside [TC Mask] at frame 0 for ANY font size
+            var dx = props.position[0];
+            var dy = props.position[1];
+            var xExpr = dx === 0 ? "0" : ((dx > 0 ? 1 : -1) + " * (r.width + 64)");
+            var yExpr = dy === 0 ? "0" : ((dy > 0 ? 1 : -1) + " * (r.height + 40)");
+            p2.expression = [
+                "var midT = inPoint + Math.max(0.01, (outPoint - inPoint) * 0.5);",
+                "var r = sourceRectAtTime(midT, false);",
+                "[" + xExpr + ", " + yExpr + "];"
+            ].join("\n");
+        }
     }
 
     if (props.scale) {
@@ -894,7 +906,7 @@ function tc_applyDirection(comp, layer, cfg, isOut) {
     animator.name = prefix + " " + cfg.name + (ae.mask ? " [M]" : "");
 
     var animProps = animator.property("ADBE Text Animator Properties");
-    tc_populateAnimatorProps(animProps, props, prefix);
+    tc_populateAnimatorProps(animProps, props, prefix, !!ae.mask);
 
     var selectors = animator.property("ADBE Text Selectors");
     for (var i = selectors.numProperties; i >= 1; i--) {
