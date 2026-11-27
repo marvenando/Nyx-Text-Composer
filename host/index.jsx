@@ -541,14 +541,24 @@ function tc_applyLayerEffect(layer, fxType) {
                 try { (vhsCyan.property("Distance") || vhsCyan.property(4)).setValue(bleedDist); } catch (e) {}
                 try { (vhsCyan.property("Softness") || vhsCyan.property(5)).setValue(4); } catch (e) {}
             }
-        } else if (fxType === "rottingInk" && effects.canAddProperty("ADBE Roughen Edges")) {
-            var rot = effects.addProperty("ADBE Roughen Edges");
-            rot.name = TC_PREFIX_EFX + " Rotting Edges";
-            try { (rot.property("Border") || rot.property("ADBE Roughen Edges-0002")).setValue(4.5); } catch (e) {}
-            try { (rot.property("Edge Sharpness") || rot.property("ADBE Roughen Edges-0003")).setValue(1.2); } catch (e) {}
-            try { (rot.property("Fractal Influence") || rot.property("ADBE Roughen Edges-0004")).setValue(1.8); } catch (e) {}
-            try { (rot.property("Scale") || rot.property("ADBE Roughen Edges-0005")).setValue(26); } catch (e) {}
-            try { (rot.property("Evolution") || rot.property("ADBE Roughen Edges-0008")).expression = "posterizeTime(12);\ntime * 180;"; } catch (e) {}
+        } else if (fxType === "rottingInk") {
+            if (effects.canAddProperty("ADBE Roughen Edges")) {
+                var rot = effects.addProperty("ADBE Roughen Edges");
+                rot.name = TC_PREFIX_EFX + " Rotting Edges";
+                try { (rot.property("Border") || rot.property("ADBE Roughen Edges-0002")).setValue(4.5); } catch (e) {}
+                try { (rot.property("Edge Sharpness") || rot.property("ADBE Roughen Edges-0003")).setValue(1.2); } catch (e) {}
+                try { (rot.property("Fractal Influence") || rot.property("ADBE Roughen Edges-0004")).setValue(1.8); } catch (e) {}
+                try { (rot.property("Scale") || rot.property("ADBE Roughen Edges-0005")).setValue(26); } catch (e) {}
+                try { (rot.property("Evolution") || rot.property("ADBE Roughen Edges-0009")).expression = "posterizeTime(12);\ntime * 180;"; } catch (e) {}
+            }
+            if (effects.canAddProperty("ADBE Drop Shadow")) {
+                var rotAura = effects.addProperty("ADBE Drop Shadow");
+                rotAura.name = TC_PREFIX_EFX + " Blood Aura";
+                try { (rotAura.property("Shadow Color") || rotAura.property(1)).setValue([0.72, 0.08, 0.08, 1]); } catch (e) {}
+                try { (rotAura.property("Opacity") || rotAura.property(2)).setValue(160); } catch (e) {}
+                try { (rotAura.property("Distance") || rotAura.property(4)).setValue(0); } catch (e) {}
+                try { (rotAura.property("Softness") || rotAura.property(5)).setValue(14); } catch (e) {}
+            }
         } else if (fxType === "analogHorror" || fxType === "boilingDecay") {
             if (effects.canAddProperty("ADBE Turbulent Displace")) {
                 var td = effects.addProperty("ADBE Turbulent Displace");
@@ -557,19 +567,38 @@ function tc_applyLayerEffect(layer, fxType) {
                 try { (td.property("Size") || td.property(3)).setValue(fxType === "boilingDecay" ? 16 : 18); } catch (e) {}
                 try { (td.property("Evolution") || td.property(6)).expression = "posterizeTime(8);\ntime * 150;"; } catch (e) {}
             }
-            if (fxType === "analogHorror" && effects.canAddProperty("ADBE Venetian Blinds")) {
-                var aScan = effects.addProperty("ADBE Venetian Blinds");
-                aScan.name = TC_PREFIX_EFX + " CCTV Scanlines";
-                try { aScan.property("ADBE Venetian Blinds-0001").setValue(20); } catch (e) {}
-                try { aScan.property("ADBE Venetian Blinds-0002").setValue(90); } catch (e) {}
-                try { aScan.property("ADBE Venetian Blinds-0003").setValue(4); } catch (e) {}
+            if (fxType === "analogHorror") {
+                if (effects.canAddProperty("ADBE Venetian Blinds")) {
+                    var aScan = effects.addProperty("ADBE Venetian Blinds");
+                    aScan.name = TC_PREFIX_EFX + " CCTV Scanlines";
+                    try { aScan.property("ADBE Venetian Blinds-0001").setValue(20); } catch (e) {}
+                    try { aScan.property("ADBE Venetian Blinds-0002").setValue(90); } catch (e) {}
+                    try { aScan.property("ADBE Venetian Blinds-0003").setValue(4); } catch (e) {}
+                }
+                if (effects.canAddProperty("ADBE Drop Shadow")) {
+                    var aRed = effects.addProperty("ADBE Drop Shadow");
+                    aRed.name = TC_PREFIX_EFX + " Analog Red";
+                    try { (aRed.property("Shadow Color") || aRed.property(1)).setValue([1.0, 0.16, 0.28, 1]); } catch (e) {}
+                    try { (aRed.property("Opacity") || aRed.property(2)).setValue(150); } catch (e) {}
+                    try { (aRed.property("Direction") || aRed.property(3)).setValue(270); } catch (e) {}
+                    try { (aRed.property("Distance") || aRed.property(4)).setValue(4); } catch (e) {}
+                    try { (aRed.property("Softness") || aRed.property(5)).setValue(2); } catch (e) {}
+
+                    var aCyan = effects.addProperty("ADBE Drop Shadow");
+                    aCyan.name = TC_PREFIX_EFX + " Analog Cyan";
+                    try { (aCyan.property("Shadow Color") || aCyan.property(1)).setValue([0.2, 0.86, 1.0, 1]); } catch (e) {}
+                    try { (aCyan.property("Opacity") || aCyan.property(2)).setValue(150); } catch (e) {}
+                    try { (aCyan.property("Direction") || aCyan.property(3)).setValue(90); } catch (e) {}
+                    try { (aCyan.property("Distance") || aCyan.property(4)).setValue(4); } catch (e) {}
+                    try { (aCyan.property("Softness") || aCyan.property(5)).setValue(2); } catch (e) {}
+                }
             }
             if (fxType === "boilingDecay" && effects.canAddProperty("ADBE Roughen Edges")) {
                 var bd = effects.addProperty("ADBE Roughen Edges");
                 bd.name = TC_PREFIX_EFX + " Decay Edges";
                 try { (bd.property("Border") || bd.property("ADBE Roughen Edges-0002")).setValue(3.5); } catch (e) {}
                 try { (bd.property("Scale") || bd.property("ADBE Roughen Edges-0005")).setValue(28); } catch (e) {}
-                try { (bd.property("Evolution") || bd.property("ADBE Roughen Edges-0008")).expression = "posterizeTime(8);\ntime * 140;"; } catch (e) {}
+                try { (bd.property("Evolution") || bd.property("ADBE Roughen Edges-0009")).expression = "posterizeTime(8);\ntime * 140;"; } catch (e) {}
             }
         }
     } catch (e) {}
@@ -727,10 +756,17 @@ function tc_buildSelectorExpression(prefix, isOut, easeType, randomOrder, center
         // Rapidly scramble visible characters through random offsets, then lock cleanly to 0
         lines.push("var frameStep = Math.floor(time * 22);");
         lines.push("var rnd = Math.abs(Math.sin((idx + 1) * 19.7 + frameStep * 12.9898));");
+        lines.push("var amt = (t <= 0.02 || t >= 0.95) ? 0 : (0.25 + rnd * 0.75) * 100;");
+        lines.push("amt;");
+        return lines.join("\n");
+    } else if (easeType === "twitch") {
+        // Erratic bidirectional +/- horror twitch at 14fps, decaying cleanly to 0
+        lines.push("var twStep = Math.floor(time * 14);");
+        lines.push("var tw = Math.sin((idx + 1) * 17.3 + twStep * 13.7);");
         if (isOut) {
-            lines.push("var amt = (t <= 0.02 || t >= 0.95) ? 0 : (0.25 + rnd * 0.75) * 100;");
+            lines.push("var amt = (t <= 0.02 || t >= 0.96) ? 0 : tw * t * 100;");
         } else {
-            lines.push("var amt = (t <= 0.02 || t >= 0.95) ? 0 : (0.25 + rnd * 0.75) * 100;");
+            lines.push("var amt = (t <= 0.02 || t >= 0.96) ? 0 : tw * (1 - t) * 100;");
         }
         lines.push("amt;");
         return lines.join("\n");
@@ -868,7 +904,7 @@ function tc_applyDirection(comp, layer, cfg, isOut) {
     var expSel = selectors.addProperty("ADBE Text Expressible Selector");
     var basedOnCode = 1;
     if (cfg.basedOn === "words") basedOnCode = 3;
-    else if (cfg.basedOn === "lines") basedOnCode = 4;
+    else if (cfg.basedOn === "lines" || cfg.basedOn === "all") basedOnCode = 4;
 
     var needsCenterPivot = !!(ae && ae.centerPivot) ||
         (cfg.id !== "stretch_vertical" && (!!props.scale || typeof props.rotation === "number" || typeof props.rotationX === "number" || typeof props.rotationY === "number"));

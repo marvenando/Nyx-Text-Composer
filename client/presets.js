@@ -1451,10 +1451,11 @@ window.TEXT_COMPOSER_PRESETS = [
     defaultBasedOn: "chars",
     preview: { mode: "possessed-twitch", unit: "chars", ease: "glitch" },
     ae: {
-      ease: "glitch",
+      ease: "twitch",
+      visGate: true,
       randomOrder: true,
       centerPivot: true,
-      props: { position: [18, -22], rotation: 16, opacity: 0 }
+      props: { position: [18, -22], rotation: 16 }
     }
   },
   {
@@ -1585,9 +1586,9 @@ window.TEXT_COMPOSER_PRESETS = [
     ae: {
       loopMode: "wiggle",
       loopSpeed: 8,
-      loopIntensity: 45,
+      loopIntensity: 55,
       fxEffect: "boilingDecay",
-      props: { position: [3, 3] }
+      props: { position: [4, 4], skew: 5 }
     }
   },
   {
