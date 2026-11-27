@@ -1179,12 +1179,47 @@
     return 0;
   }
 
-  function fetchRepoFile(relPath) {
+  function fetchLatestSha() {
     var token = loadToken();
     var branch = config.branch || "main";
+    var url = "https://api.github.com/repos/" + config.githubRepo + "/commits/" + encodeURIComponent(branch);
+    var headers = {
+      "Accept": "application/vnd.github.sha",
+      "X-GitHub-Api-Version": "2022-11-28"
+    };
     if (token) {
-      var apiUrl = "https://api.github.com/repos/" + config.githubRepo + "/contents/" + relPath + "?ref=" + encodeURIComponent(branch) + "&t=" + Date.now();
+      headers["Authorization"] = "Bearer " + token;
+    }
+    return fetch(url, { headers: headers, cache: "no-store" })
+      .then(function (resp) {
+        if (!resp.ok) {
+          if ((resp.status === 404 || resp.status === 401 || resp.status === 403) && !token) {
+            // Fall back to branch name on rate-limit or public fallback
+            return branch;
+          }
+          if (resp.status === 401 || resp.status === 403) {
+            throw new Error("Invalid or expired Update Token (HTTP " + resp.status + ").");
+          }
+          return branch;
+        }
+        return resp.text().then(function (sha) {
+          var clean = String(sha || "").trim();
+          return /^[0-9a-f]{7,40}$/i.test(clean) ? clean : branch;
+        });
+      })
+      .catch(function (err) {
+        if (err && err.message && err.message.indexOf("Update Token") !== -1) throw err;
+        return branch;
+      });
+  }
+
+  function fetchRepoFile(relPath, refOverride) {
+    var token = loadToken();
+    var ref = refOverride || config.branch || "main";
+    if (token) {
+      var apiUrl = "https://api.github.com/repos/" + config.githubRepo + "/contents/" + relPath + "?ref=" + encodeURIComponent(ref);
       return fetch(apiUrl, {
+        cache: "no-store",
         headers: {
           "Authorization": "Bearer " + token,
           "Accept": "application/vnd.github.raw+json",
@@ -1192,9 +1227,11 @@
         }
       });
     }
-    var rawUrl = "https://raw.githubusercontent.com/" + config.githubRepo + "/" + branch + "/" + relPath + "?t=" + Date.now();
-    return fetch(rawUrl);
+    var rawUrl = "https://raw.githubusercontent.com/" + config.githubRepo + "/" + encodeURIComponent(ref) + "/" + relPath;
+    return fetch(rawUrl, { cache: "no-store" });
   }
+
+  var latestRemoteRef = "";
 
   function getNodeRequire() {
     if (window.cep_node && typeof window.cep_node.require === "function") return window.cep_node.require;
@@ -1215,7 +1252,11 @@
       setStatus("Checking GitHub (" + config.githubRepo + ") for updates...", "");
     }
 
-    fetchRepoFile("package.json")
+    fetchLatestSha()
+      .then(function (ref) {
+        latestRemoteRef = ref;
+        return fetchRepoFile("package.json", ref);
+      })
       .then(function (resp) {
         if (!resp.ok) {
           if ((resp.status === 404 || resp.status === 401 || resp.status === 403) && !loadToken()) {
@@ -1253,7 +1294,7 @@
           return;
         }
 
-        performUpdate(remoteVer);
+        performUpdate(remoteVer, latestRemoteRef);
       })
       .catch(function (err) {
         if (!silent) {
@@ -1263,7 +1304,7 @@
       });
   }
 
-  function performUpdate(remoteVer) {
+  function performUpdate(remoteVer, refOverride) {
     var nodeReq = getNodeRequire();
     if (!nodeReq || !csInterface.isCEP()) {
       elBtnUpdate.classList.remove("spinning");
@@ -1281,11 +1322,12 @@
     }
 
     var files = config.updateFiles || [];
+    var targetRef = refOverride || latestRemoteRef || config.branch || "main";
     setStatus("Downloading v" + remoteVer + " (" + files.length + " files)...", "");
 
     Promise.all(
       files.map(function (relPath) {
-        return fetchRepoFile(relPath).then(function (r) {
+        return fetchRepoFile(relPath, targetRef).then(function (r) {
           if (!r.ok) throw new Error("Failed " + relPath + " (HTTP " + r.status + ")");
           return r.text().then(function (txt) {
             return { relPath: relPath, content: txt };
