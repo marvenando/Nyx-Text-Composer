@@ -500,6 +500,7 @@
         var hLine = clamp01(p * 1.35);
         var hTxt = clamp01((p - 0.12) / 0.88);
         opacity = clamp01(hTxt * 1.6);
+        letterSpacing = (0.06 + (1 - hTxt) * 0.28).toFixed(3) + "em";
         el.style.paddingBottom = "5px";
         el.style.backgroundImage = "linear-gradient(var(--text-primary), var(--text-primary))";
         el.style.backgroundRepeat = "no-repeat";
@@ -522,6 +523,10 @@
       case "pendulum":
         transform = "rotate(" + (inv * 38).toFixed(1) + "deg)";
         opacity = clamp01(p * 1.6);
+        break;
+      case "domino-3d":
+        transform = "translate3d(0," + (-inv * 24).toFixed(1) + "px," + (inv * 50).toFixed(1) + "px) rotateX(" + (inv * 100).toFixed(1) + "deg) rotate(" + (inv * 12).toFixed(1) + "deg)";
+        opacity = clamp01(p * 1.8);
         break;
       // ---- NEW PACK 11: MORE LOOPS & FX ----
       case "loop-neon-flicker":
@@ -596,10 +601,12 @@
         opacity = clamp01(p * 0.95);
         break;
       case "jumpscare-slam":
-        var scJump = 1 + (1 - p) * 1.3;
-        var jShake = p < 0.85 ? (Math.sin(nowMs * 0.14) * (1 - clamp01(p)) * 6) : 0;
-        transform = "scale(" + Math.max(0.85, scJump).toFixed(3) + ") translate3d(" + jShake.toFixed(1) + "px,0,0)";
-        el.style.textShadow = p < 0.8 ? "4px 0 #dc143c, -4px 0 #00e5ff" : "none";
+        var scJump = 1 + (1 - p) * 1.5;
+        var jShake = p < 0.85 ? (Math.sin(nowMs * 0.14) * (1 - clamp01(p)) * 7) : 0;
+        var jRot = (1 - p) * -12;
+        letterSpacing = (0.06 + Math.max(0, 1 - p) * 0.32).toFixed(3) + "em";
+        transform = "scale(" + Math.max(0.85, scJump).toFixed(3) + ") rotate(" + jRot.toFixed(1) + "deg) translate3d(" + jShake.toFixed(1) + "px,0,0)";
+        el.style.textShadow = p < 0.8 ? "4px 0 #dc143c, -4px 0 #00e5ff" : "0 0 5px rgba(180,30,30,0.45)";
         filter = inv > 0.05 ? "blur(" + (Math.abs(inv) * 6).toFixed(1) + "px)" : "none";
         opacity = p > 0.02 ? 1 : 0;
         break;

@@ -1212,8 +1212,8 @@ window.TEXT_COMPOSER_PRESETS = [
     category: "luxury",
     tags: ["luxury", "line", "horizon", "minimal", "mask", "editorial"],
     sampleText: "HORIZON",
-    defaultDuration: 1.0,
-    defaultStagger: 25,
+    defaultDuration: 1.25,
+    defaultStagger: 20,
     defaultOvershoot: 0,
     defaultBasedOn: "words",
     preview: { mode: "horizon-line", unit: "whole", ease: "expo" },
@@ -1222,7 +1222,7 @@ window.TEXT_COMPOSER_PRESETS = [
       ease: "expo",
       bgShape: "horizon",
       bgColor: [0.95, 0.95, 0.95, 1],
-      props: { position: [0, 72] }
+      props: { position: [0, 72], tracking: 32 }
     }
   },
 
@@ -1284,16 +1284,16 @@ window.TEXT_COMPOSER_PRESETS = [
     category: "kinetic",
     tags: ["kinetic", "3d", "domino", "cascade", "poster", "flip"],
     sampleText: "DOMINO",
-    defaultDuration: 0.9,
-    defaultStagger: 75,
-    defaultOvershoot: 25,
+    defaultDuration: 1.05,
+    defaultStagger: 82,
+    defaultOvershoot: 35,
     defaultBasedOn: "chars",
-    preview: { mode: "flip-x", unit: "chars", ease: "back" },
+    preview: { mode: "domino-3d", unit: "chars", ease: "elastic" },
     ae: {
       perChar3D: true,
-      ease: "back",
+      ease: "elastic",
       centerPivot: true,
-      props: { rotationX: -85, position3D: [0, -35, 40], opacity: 0 }
+      props: { rotationX: 105, rotation: 12, position3D: [0, -110, 180], opacity: 0 }
     }
   },
 
@@ -1517,16 +1517,17 @@ window.TEXT_COMPOSER_PRESETS = [
     category: "horror",
     tags: ["horror", "jumpscare", "slam", "trailer", "impact", "scary"],
     sampleText: "RUN",
-    defaultDuration: 0.45,
-    defaultStagger: 10,
+    defaultDuration: 0.42,
+    defaultStagger: 0,
     defaultOvershoot: 45,
-    defaultBasedOn: "words",
-    preview: { mode: "jumpscare-slam", unit: "words", ease: "impact" },
+    defaultBasedOn: "all",
+    preview: { mode: "jumpscare-slam", unit: "whole", ease: "impact" },
     ae: {
       ease: "impact",
       centerPivot: true,
       rgbHit: true,
-      props: { scale: [240, 240], blur: [42, 18], opacity: 0 }
+      fxEffect: "rottingInk",
+      props: { scale: [260, 260], rotation: -12, tracking: 55, blur: [48, 22], opacity: 0 }
     }
   },
 
